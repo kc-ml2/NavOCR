@@ -6,7 +6,7 @@ from paddleocr import PaddleOCR, draw_ocr
 import numpy as np
 from PIL import Image
 import textdistance as td
-
+import shutil  # 파일 복사를 위해 추가
 import utils
 
 # 로깅 설정
@@ -68,6 +68,10 @@ def save_image_info_to_csv(csv_file_path, dong_name, category, lang, image_filen
         logging.error(f"CSV 저장 오류 ({csv_file_path}): {e}")
 
 ocr = initialize_ocr(language=utils.LANGUAGE, use_angle_cls=True)
+
+# 유사도가 높은 이미지들을 복사할 디렉토리 설정
+high_similarity_dir = os.path.join(utils.OUTPUT_ROOT, 'high_similarity_images')
+ensure_directory(high_similarity_dir)  # 디렉토리 생성
 
 for dong in os.listdir(utils.INPUT_ROOT):
     # if dong != "코엑스":
@@ -183,6 +187,11 @@ for dong in os.listdir(utils.INPUT_ROOT):
                         
                         # CSV 저장
                         save_image_info_to_csv(csv_path, dong, shop, utils.LANGUAGE, image_file, filtered_words, filtered_scores, filtered_similarities, box_center, filtered_boxes)
+                        
+                        # 유사도가 높은 이미지의 원본 파일을 별도 디렉토리에 복사
+                        destination_path = os.path.join(high_similarity_dir, f"{dong}_{shop}_{image_file}")
+                        shutil.copy2(image_path, destination_path)
+                        logging.info(f"유사도가 높은 이미지 복사 완료: {destination_path}")
                     else:
                         logging.info(f"유사도가 높은 OCR 단어가 없어 이미지 저장하지 않음: {image_path}")
 
