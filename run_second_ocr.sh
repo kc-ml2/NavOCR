@@ -26,7 +26,7 @@ for similarity in "${SIMILARITY_THRESHOLD[@]}"; do
     echo "실행 중: 유사도=${similarity}, 언어=${language}"
     
     # 환경 변수 설정 후 run.py 실행
-    SIMILARITY_THRESHOLD=$similarity LANGUAGE=$language python3 /home/sooyong/datasets/shopOCR/runOCR/run.py
+    SIMILARITY_THRESHOLD=$similarity LANGUAGE=$language python3 /home/sooyong/datasets/shopOCR/runOCR/second-process/run.py
     
     # 실행 완료 메시지
     echo "완료: 유사도=${similarity}, 언어=${language}"
