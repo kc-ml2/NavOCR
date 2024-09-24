@@ -1,10 +1,10 @@
 import os
 
 # 폰트 파일 경로
-FONT_PATH = '/home/sooyong/datasets/shopOCR/fonts/AppleGothic.ttf'
+FONT_PATH = '/home/sooyong/workspace/text_filtering_robot_mapping/shopOCR/fonts/AppleGothic.ttf'
 
 # 유사도 임계값
-SIMILARITY_THRESHOLD = float(os.getenv('SIMILARITY_THRESHOLD', '0.7'))
+SIMILARITY_THRESHOLD = float(os.getenv('SIMILARITY_THRESHOLD', '0.5'))
 
 # 폴더, 카테고리, 언어를 환경 변수에서 가져오거나 기본값 사용
 FOLDER = os.getenv('FOLDER', 'Starfield')
