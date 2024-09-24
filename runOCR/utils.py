@@ -4,7 +4,7 @@ import os
 FONT_PATH = '/home/sooyong/datasets/shopOCR/fonts/AppleGothic.ttf'
 
 # 유사도 임계값
-SIMILARITY_THRESHOLD = float(os.getenv('SIMILARITY_THRESHOLD', '0.7'))
+SIMILARITY_THRESHOLD = float(os.getenv('SIMILARITY_THRESHOLD', '0.6'))
 
 # 폴더, 카테고리, 언어를 환경 변수에서 가져오거나 기본값 사용
 FOLDER = os.getenv('FOLDER', 'Starfield')
@@ -18,5 +18,8 @@ LANGUAGE_FOLDER_MAP = {
 
 LANGUAGE_FOLDER = LANGUAGE_FOLDER_MAP.get(LANGUAGE_CODE.lower(), 'english')
 
-INPUT_ROOT = f'/home/sooyong/datasets/crawling-results/{FOLDER}/{CATEGORY}/{LANGUAGE_FOLDER}'
-OUTPUT_ROOT = f'/home/sooyong/datasets/OCR-results/sim{SIMILARITY_THRESHOLD}/{FOLDER}/{CATEGORY}/{LANGUAGE_FOLDER}'
+# INPUT_ROOT = f'/home/sooyong/datasets/crawling-results/{FOLDER}/{CATEGORY}/{LANGUAGE_FOLDER}'
+INPUT_ROOT = f'/home/sooyong/datasets/refine-datasets/sim{SIMILARITY_THRESHOLD}/{LANGUAGE_FOLDER}_total'
+# OUTPUT_ROOT = f'/home/sooyong/datasets/OCR-results/sim{SIMILARITY_THRESHOLD}/{FOLDER}/{CATEGORY}/{LANGUAGE_FOLDER}'
+OUTPUT_ROOT = f'/home/sooyong/datasets/refine-datasets/sim{SIMILARITY_THRESHOLD}/{LANGUAGE_FOLDER}_OCR'
+CSV_ROOT = f'/home/sooyong/datasets/refine-datasets/sim{SIMILARITY_THRESHOLD}'
