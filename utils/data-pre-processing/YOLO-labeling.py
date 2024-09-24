@@ -2,7 +2,7 @@ import csv
 import os
 import ast
 
-similarity = "0.6"
+similarity = "0.7"
 language = "korean"
 # CSV 파일 읽기
 csv_file = f"/home/sooyong/datasets/refine-datasets/sim{similarity}/ocr_info_{language}.csv"
@@ -14,7 +14,7 @@ with open(csv_file, 'r') as file:
         dong_name = row['dong_name']
         category = row['category']
         image_filename = row['image_filename'].replace('.jpg', '')
-        label_filename = f"{dong_name}_{category}_{image_filename}_result.txt"
+        label_filename = f"{dong_name}_{category}_{image_filename}.txt"
 
         # 이미지의 width와 height 값 읽기
         image_width = float(row['width'])
@@ -24,7 +24,7 @@ with open(csv_file, 'r') as file:
         boxes = ast.literal_eval(row['boxes'])  # 문자열을 리스트로 변환
 
         # 라벨 저장 경로 설정
-        label_dir = f'labels/sim{similarity}/{language}'
+        label_dir = f'/home/sooyong/datasets/refine-datasets/labels/sim{similarity}/{language}'
         label_path = os.path.join(label_dir, label_filename)
 
         # 라벨 저장 경로 디렉토리가 없으면 생성
