@@ -157,11 +157,11 @@ def create_dataset(
 
 if __name__ == "__main__":
 
-    box_size = "(2,2)"
-    server = "epsilon"
+    box_size = "(3,1.5)"
+    server = "zeta"
     # Configuration
-    SOURCE_BASE_DIR = f"/home/sooyong/datasets/original-datasets/textbox{box_size}"
-    DESTINATION_BASE_DIR = f"/home/sooyong/datasets/yolo-dataset/textbox{box_size}"
+    SOURCE_BASE_DIR = f"/home/sooyong/datasets/label-datasets/textbox{box_size}"
+    DESTINATION_BASE_DIR = f"/home/sooyong/datasets/yolo-dataset-{server}/textbox{box_size}"
 
     # Number of samples to select
     NUM_ENGLISH_SAMPLES = 11250 if server == "epsilon" else 7500 # 원하는 영어 샘플 수
