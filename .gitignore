@@ -1,1 +1,7 @@
 .vscode
+project/YOLO-fine-tune/training/runs
+project/YOLO-fine-tune/overfitting/runs
+project/YOLO-fine-tune/training/yolov8n.pt
+project/YOLO-fine-tune/training/yolov10n.pt
+project/YOLO-fine-tune/overfitting/yolov8n.pt
+project/YOLO-fine-tune/overfitting/yolov10n.pt
