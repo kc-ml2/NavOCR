@@ -156,18 +156,21 @@ def create_dataset(
     print("Dataset creation complete.")
 
 if __name__ == "__main__":
+
+    box_size = "(2,2)"
+    server = "epsilon"
     # Configuration
-    SOURCE_BASE_DIR = "/home/sooyong/datasets/original-datasets/textbox(2,2)/sim0.7"
-    DESTINATION_BASE_DIR = "/home/sooyong/datasets/yolo-dataset/textbox(2,2)/remove"
+    SOURCE_BASE_DIR = f"/home/sooyong/datasets/original-datasets/textbox{box_size}"
+    DESTINATION_BASE_DIR = f"/home/sooyong/datasets/yolo-dataset/textbox{box_size}"
 
     # Number of samples to select
-    NUM_ENGLISH_SAMPLES = 7500  # 원하는 영어 샘플 수
-    NUM_KOREAN_SAMPLES = 2500  # 원하는 한국어 샘플 수
+    NUM_ENGLISH_SAMPLES = 11250 if server == "epsilon" else 7500 # 원하는 영어 샘플 수
+    NUM_KOREAN_SAMPLES = 3750 if server == "epsilon" else 2500  # 원하는 한국어 샘플 수
 
     # Split ratios
-    TRAIN_RATIO = 0.6
+    TRAIN_RATIO = 0.7
     VAL_RATIO = 0.2
-    TEST_RATIO = 0.2
+    TEST_RATIO = 0.1
 
     # Create the dataset
     create_dataset(
