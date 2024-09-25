@@ -8,13 +8,13 @@ project/YOLO-fine-tune/zeta/training-2/runs
 project/YOLO-fine-tune/zeta/training-2/yolov8n.pt
 project/YOLO-fine-tune/zeta/training-2/yolov10n.pt
 
-project/YOLO-fine-tune/epsilon/training-1/runs
-project/YOLO-fine-tune/epsilon/training-1/yolov8n.pt
-project/YOLO-fine-tune/epsilon/training-1/yolov10n.pt
+project/YOLO-fine-tune/epsilon/training-3/runs
+project/YOLO-fine-tune/epsilon/training-3/yolov8n.pt
+project/YOLO-fine-tune/epsilon/training-3/yolov10n.pt
 
-project/YOLO-fine-tune/epsilon/training-2/runs
-project/YOLO-fine-tune/epsilon/training-2/yolov8n.pt
-project/YOLO-fine-tune/epsilon/training-2/yolov10n.pt
+project/YOLO-fine-tune/epsilon/training-4/runs
+project/YOLO-fine-tune/epsilon/training-4/yolov8n.pt
+project/YOLO-fine-tune/epsilon/training-4/yolov10n.pt
 
 project/YOLO-fine-tune/overfitting/runs
 project/YOLO-fine-tune/overfitting/yolov8n.pt
