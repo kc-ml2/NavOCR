@@ -5,7 +5,7 @@ import ast
 similarity = "0.7"
 language = "korean"
 # CSV 파일 읽기
-csv_file = f"/home/sooyong/datasets/refine-datasets/sim{similarity}/ocr_info_{language}.csv"
+csv_file = f"/home/sooyong/datasets/original-datasets/textbox/sim{similarity}/ocr_info_{language}.csv"
 with open(csv_file, 'r') as file:
     reader = csv.DictReader(file)
     
@@ -24,7 +24,7 @@ with open(csv_file, 'r') as file:
         boxes = ast.literal_eval(row['boxes'])  # 문자열을 리스트로 변환
 
         # 라벨 저장 경로 설정
-        label_dir = f'/home/sooyong/datasets/refine-datasets/labels/sim{similarity}/{language}'
+        label_dir = f'/home/sooyong/datasets/original-datasets/textbox(2,2)/sim{similarity}/{language}_label'
         label_path = os.path.join(label_dir, label_filename)
 
         # 라벨 저장 경로 디렉토리가 없으면 생성
@@ -53,6 +53,12 @@ with open(csv_file, 'r') as file:
                 y_center /= image_height
                 width /= image_width
                 height /= image_height
+
+                width *= 2
+                height *= 2
+
+                width = 1 if width > 1 else width
+                height = 1 if height > 1 else height
                 
                 # 클래스 ID (카테고리에서 추출, 예시로 'cafe'를 0번으로 설정)
                 class_id = 0  # 필요에 따라 class_id 매핑
