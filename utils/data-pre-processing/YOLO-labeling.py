@@ -2,10 +2,13 @@ import csv
 import os
 import ast
 
-similarity = "0.7"
+# similarity = "0.7"
+# language = "english"
 language = "korean"
+width_mul = 3
+height_mul = 1.5
 # CSV 파일 읽기
-csv_file = f"/home/sooyong/datasets/original-datasets/textbox/sim{similarity}/ocr_info_{language}.csv"
+csv_file = f"/home/sooyong/datasets/original-datasets/image-csv/sim0.7/ocr_info_{language}.csv"
 with open(csv_file, 'r') as file:
     reader = csv.DictReader(file)
     
@@ -24,7 +27,7 @@ with open(csv_file, 'r') as file:
         boxes = ast.literal_eval(row['boxes'])  # 문자열을 리스트로 변환
 
         # 라벨 저장 경로 설정
-        label_dir = f'/home/sooyong/datasets/original-datasets/textbox(2,2)/sim{similarity}/{language}_label'
+        label_dir = f'/home/sooyong/datasets/label-datasets/textbox({width_mul},{height_mul})/{language}_label'
         label_path = os.path.join(label_dir, label_filename)
 
         # 라벨 저장 경로 디렉토리가 없으면 생성
@@ -54,8 +57,8 @@ with open(csv_file, 'r') as file:
                 width /= image_width
                 height /= image_height
 
-                width *= 2
-                height *= 2
+                width *= width_mul
+                height *= height_mul
 
                 width = 1 if width > 1 else width
                 height = 1 if height > 1 else height
