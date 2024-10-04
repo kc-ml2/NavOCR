@@ -3,10 +3,10 @@ import os
 import ast
 
 # similarity = "0.7"
-# language = "english"
-language = "korean"
-width_mul = 3
-height_mul = 1.5
+language = "english"
+# language = "korean"
+width_mul = 2.5
+height_mul = 2.5
 # CSV 파일 읽기
 csv_file = f"/home/sooyong/datasets/original-datasets/image-csv/sim0.7/ocr_info_{language}.csv"
 with open(csv_file, 'r') as file:
