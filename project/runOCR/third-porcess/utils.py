@@ -1,7 +1,7 @@
 import os
 
 # 폰트 파일 경로
-FONT_PATH = '/home/sooyong/workspace/text_filtering_robot_mapping/shopOCR/fonts/AppleGothic.ttf'
+FONT_PATH = '/home/sooyong/workspace/shopOCR/fonts/AppleGothic.ttf'
 
 LANGUAGE_CODE = 'en'
 
@@ -9,5 +9,5 @@ LANGUAGE_CODE = 'en'
 INPUT_ROOT = f'/home/sooyong/datasets/-- result --/coex-img'
 # INPUT_ROOT = f'/home/sooyong/datasets/-- result --/coex-img-2'
 # OUTPUT_ROOT = f'/home/sooyong/datasets/OCR-results/sim{SIMILARITY_THRESHOLD}/{FOLDER}/{CATEGORY}/{LANGUAGE_FOLDER}'
-OUTPUT_ROOT = f'/home/sooyong/datasets/output'
-CSV_ROOT = f'/home/sooyong/datasets/output'
+OUTPUT_ROOT = f'/home/sooyong/datasets/output-3/ocr'
+CSV_ROOT = f'/home/sooyong/datasets/output-3'

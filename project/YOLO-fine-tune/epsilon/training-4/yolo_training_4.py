@@ -12,8 +12,8 @@ import itertools
 import os
 
 # 설정할 파라미터 리스트
-size_list = ["15k", "18k"]
-textbox_list = ["(1,1)", "(2,2)"]
+size_list = ["15k"]
+textbox_list = ["(2,2)"]
 
 combinations = list(itertools.product(size_list, textbox_list))
 
