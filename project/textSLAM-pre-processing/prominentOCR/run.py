@@ -92,31 +92,47 @@ def save_prominent_sign_csv(file_path, image_filename, result, x1, y1, x2, y2, c
     except Exception as e:
         logging.error(f"CSV 저장 오류: {e}")
 
+def make_file():
+    ocr_dir = os.path.join(utils.TXT_ROOT, "ocr")
+    text_dir = os.path.join(utils.TXT_ROOT, "text")
+    
+    ensure_directory(ocr_dir)
+    ensure_directory(text_dir)
+    
+    # 이미 존재하는 파일 목록을 집합으로 가져오기
+    existing_files = set(os.listdir(ocr_dir)) | set(os.listdir(text_dir))
+    
+    to_create = []
+    input_files = [f for f in os.listdir(utils.INPUT_ROOT) if f.lower().endswith('.png')]
+    
+    for image_file in input_files:
+        txt_file = image_file[:-4]  # '.png' 제거
+        files = [
+            f"ocr/{txt_file}_ocr_dete.txt",
+            f"ocr/{txt_file}_ocr_mean.txt",
+            f"text/{txt_file}_dete.txt",
+            f"text/{txt_file}_mean.txt"
+        ]
+        
+        for relative_path in files:
+            if relative_path not in existing_files:
+                full_path = os.path.join(utils.TXT_ROOT, relative_path)
+                to_create.append(full_path)
+    
+    for file_path in to_create:
+        with open(file_path, 'w') as f:
+            pass  # 빈 파일 생성
 
 def ocr_first():
-    ensure_directory(utils.OUTPUT_ROOT)
-
     ocr = initialize_ocr(language=utils.LANGUAGE_CODE, use_angle_cls=True)
 
     csv_path = os.path.join(utils.TXT_ROOT, f"ocr_info.csv")
 
     # 이미지 파일 처리
     for image_file in os.listdir(utils.INPUT_ROOT):
-        if not image_file.lower().endswith(('.png')):
-            continue
-        
         txt_file = image_file.rstrip('.png')
         txt_path = os.path.join(utils.TXT_ROOT, f"ocr/{txt_file}_ocr_dete.txt")
         mean_path = os.path.join(utils.TXT_ROOT, f"ocr/{txt_file}_ocr_mean.txt")
-
-        txt_path_text = os.path.join(utils.TXT_ROOT, f"text/{txt_file}_dete.txt")
-        mean_path_text = os.path.join(utils.TXT_ROOT, f"text/{txt_file}_mean.txt")
-
-        ensure_file(txt_path)
-        ensure_file(mean_path)
-
-        ensure_file(txt_path_text)
-        ensure_file(mean_path_text)
         
         image_path = os.path.join(utils.INPUT_ROOT, image_file)
 
@@ -131,10 +147,7 @@ def ocr_first():
 
             if len(all_words) == len(boxes):
                 for i, single_word in enumerate(all_words):
-                    x1 = boxes[i][0]
-                    y1 = boxes[i][1]
-                    x2 = boxes[i][2]
-                    y2 = boxes[i][3]
+                    x1, y1, x2, y2 = boxes[i]
                     center_x = (x1[0] + y1[0] + x2[0] + y2[0]) / 4
                     center_y = (x1[1] + y1[1] + x2[1] + y2[1]) / 4
                     save_position_to_txt(x1, y1, x2, y2, txt_path)
@@ -262,6 +275,7 @@ def compare(ocr_path, yolo_path):
 
 
 def main():
+    make_file()
     ocr_first()
     # compare("/mnt/sda/coex_data/result_241107_2/preprocessing/ocr_info.csv", "/mnt/sda/coex_data/result_241107_2/preprocessing/yolo_info.csv")
 
