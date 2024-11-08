@@ -1,5 +1,6 @@
 import csv
 import os
+import time
 from ultralytics import YOLO
 
 model = YOLO("/home/sooyong/datasets/yolo-dataset/results/epsilon-15k_textbox(2,2)/train/weights/best.pt")
@@ -7,7 +8,7 @@ model = YOLO("/home/sooyong/datasets/yolo-dataset/results/epsilon-15k_textbox(2,
 
 # results = model("/home/sooyong/datasets/yolo-dataset/7:1.5:1.5/epsilon-15k/textbox(2,2)/images/test", save=True, show=True, project="/home/sooyong/datasets/test")
 # results = model(source=0, save=True, show=True)
-results = model(source="/home/sooyong/datasets/-- result --/coex-img", save=True, show=True, project="/home/sooyong/datasets/output-3")
+results = model(source="/mnt/sda/coex_data/result_241107_2/images", save=True, show=False, project="/mnt/sda/coex_data/result_241107_2/preprocessing", stream=True, conf=0.5)
 # results = model(source="/home/sooyong/datasets/003016_1.png", save=False, show=True, project="output")
 
 def save_to_csv(file_path, filename, x1, y1, x2, y2, conf):
@@ -36,7 +37,19 @@ def run_yolo(results):
             for box in r.boxes.data:
                 x1, y1, x2, y2, conf = float(box[0]), float(box[1]), float(box[2]), float(box[3]), float(box[4])
                 # 홈 디렉토리에 CSV 파일을 저장하도록 변경
-                save_to_csv('/home/sooyong/datasets/output-3/yolo_info.csv', file_name, x1, y1, x2, y2, conf)
+                save_to_csv('/mnt/sda/coex_data/result_241107_2/preprocessing/yolo_info.csv', file_name, x1, y1, x2, y2, conf)
 
-# YOLO 결과 처리 함수 실행
-run_yolo(results)
+def main():
+    start_time = time.time()  # 시작 시간 기록
+
+    # YOLO 결과 처리 함수 실행
+    run_yolo(results)
+
+    end_time = time.time()  # 종료 시간 기록
+    elapsed_time = end_time - start_time  # 총 걸린 시간 계산
+
+    # 총 실행 시간 출력
+    print(f"총 실행 시간: {elapsed_time:.2f}초")
+
+if __name__ == "__main__":
+    main()

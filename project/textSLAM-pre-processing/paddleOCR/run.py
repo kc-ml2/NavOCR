@@ -5,6 +5,7 @@ from paddleocr import PaddleOCR, draw_ocr
 import numpy as np
 from PIL import Image
 import utils
+import time
 
 def initialize_ocr(language='en', use_angle_cls=True, use_gpu=True):
     return PaddleOCR(use_angle_cls=use_angle_cls, lang=language, use_gpu=use_gpu)
@@ -81,7 +82,11 @@ def ocr_first():
             logging.error(f"이미지 처리 오류 ({image_path}): {e}")
 
 def main():
+    start_time = time.time()  # 시작 시간 기록
     ocr_first()
+    end_time = time.time()  # 종료 시간 기록
+    elapsed_time = end_time - start_time  # 총 걸린 시간 계산
+    print(f"총 실행 시간: {elapsed_time:.2f}초")
 
 if __name__ == "__main__":
     main()
