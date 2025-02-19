@@ -2,14 +2,12 @@ import csv
 import os
 import time
 from ultralytics import YOLO
+import utils
 
-model = YOLO("/home/sooyong/datasets/yolo-dataset/results/epsilon-15k_textbox(2,2)/train/weights/best.pt")
-# # model = YOLO("yolov8n.pt")
+model = YOLO("/home/sooyong/datasets/yolo-dataset/results/epsilon-15k_textbox(2,2)_adam/train/weights/best.pt")
 
-# results = model("/home/sooyong/datasets/yolo-dataset/7:1.5:1.5/epsilon-15k/textbox(2,2)/images/test", save=True, show=True, project="/home/sooyong/datasets/test")
-# results = model(source=0, save=True, show=True)
-results = model(source="/mnt/sda/coex_data/result_241107_2/images", save=True, show=False, project="/mnt/sda/coex_data/result_241107_2/preprocessing", stream=True, conf=0.5)
-# results = model(source="/home/sooyong/datasets/003016_1.png", save=False, show=True, project="output")
+results = model(source=f"{utils.OUTPUT_ROOT}/images", save=True, show=False, project=f"{utils.OUTPUT_ROOT}/yolo", stream=True, conf=utils.CONFIDENCE)
+
 
 def save_to_csv(file_path, filename, x1, y1, x2, y2, conf):
     try:
@@ -37,7 +35,7 @@ def run_yolo(results):
             for box in r.boxes.data:
                 x1, y1, x2, y2, conf = float(box[0]), float(box[1]), float(box[2]), float(box[3]), float(box[4])
                 # 홈 디렉토리에 CSV 파일을 저장하도록 변경
-                save_to_csv('/mnt/sda/coex_data/result_241107_2/preprocessing/yolo_info.csv', file_name, x1, y1, x2, y2, conf)
+                save_to_csv(f'{utils.OUTPUT_ROOT}/yolo/yolo_info.csv', file_name, x1, y1, x2, y2, conf)
 
 def main():
     start_time = time.time()  # 시작 시간 기록

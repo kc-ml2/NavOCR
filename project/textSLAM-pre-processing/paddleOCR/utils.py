@@ -5,10 +5,7 @@ FONT_PATH = '/home/sooyong/workspace/shopOCR/fonts/AppleGothic.ttf'
 
 LANGUAGE_CODE = 'en'
 
-# INPUT_ROOT = f'/home/sooyong/datasets/crawling-results/{FOLDER}/{CATEGORY}/{LANGUAGE_FOLDER}'
-# INPUT_ROOT = f'/mnt/sda/coex_data/result_241107/images'
-INPUT_ROOT = f'/mnt/sda/coex_data/result_241107_2/textSLAM/images'
-# INPUT_ROOT = f'/home/sooyong/datasets/-- result --/coex-img-2'
-# OUTPUT_ROOT = f'/home/sooyong/datasets/OCR-results/sim{SIMILARITY_THRESHOLD}/{FOLDER}/{CATEGORY}/{LANGUAGE_FOLDER}'
-OUTPUT_ROOT = f'/mnt/sda/coex_data/result_241107_2/textSLAM'
-TXT_ROOT = f'/mnt/sda/coex_data/result_241107_2/textSLAM/text'
+OUTPUT_ROOT = f'/mnt/sda/coex_data/track_fail/shake/shake_3'
+INPUT_ROOT = f'{OUTPUT_ROOT}/images'
+TXT_ROOT = f'{OUTPUT_ROOT}/text'
+ 

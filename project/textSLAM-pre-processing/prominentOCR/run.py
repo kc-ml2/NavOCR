@@ -1,7 +1,9 @@
+import argparse
 import csv
 import os
 import logging
 from paddleocr import PaddleOCR, draw_ocr
+import paddle
 import numpy as np
 from PIL import Image
 import utils
@@ -16,7 +18,10 @@ logging.basicConfig(
 )
 
 
+
 def initialize_ocr(language='en', use_angle_cls=True, use_gpu=True):
+    gpu_available = paddle.device.is_compiled_with_cuda()
+    print("GPU available:", gpu_available)
     return PaddleOCR(use_angle_cls=use_angle_cls, lang=language, use_gpu=use_gpu)
 
 
@@ -74,27 +79,9 @@ def save_image_info_to_csv(file_path, image_filename, result, x1, y1, x2, y2, ce
         logging.error(f"CSV 저장 오류: {e}")
 
 
-def save_prominent_sign_csv(file_path, image_filename, result, x1, y1, x2, y2, center_x, center_y, conf_ocr, conf_yolo):
-    try:
-        file_exists = os.path.exists(file_path)
-        with open(file_path, mode='a', newline='', encoding='utf-8') as file:
-            writer = csv.writer(file)
-            if not file_exists:
-                header = ['image_filename', 'result',
-                          'x1', 'y1', 'x2', 'y2', 'center_x', 'center_y', 'conf_ocr', 'conf_yolo']
-                writer.writerow(header)
-                logging.debug(f"헤더 작성 완료: {header}")
-            writer.writerow([
-                image_filename,
-                result,
-                x1, y1, x2, y2, center_x, center_y, conf_ocr, conf_yolo
-            ])
-    except Exception as e:
-        logging.error(f"CSV 저장 오류: {e}")
-
 def make_file():
-    ocr_dir = os.path.join(utils.TXT_ROOT, "ocr")
-    text_dir = os.path.join(utils.TXT_ROOT, "text")
+    ocr_dir = os.path.join(utils.OUTPUT_ROOT, "ocr")
+    text_dir = os.path.join(utils.OUTPUT_ROOT, "text")
     
     ensure_directory(ocr_dir)
     ensure_directory(text_dir)
@@ -116,7 +103,7 @@ def make_file():
         
         for relative_path in files:
             if relative_path not in existing_files:
-                full_path = os.path.join(utils.TXT_ROOT, relative_path)
+                full_path = os.path.join(utils.OUTPUT_ROOT, relative_path)
                 to_create.append(full_path)
     
     for file_path in to_create:
@@ -126,13 +113,13 @@ def make_file():
 def ocr_first():
     ocr = initialize_ocr(language=utils.LANGUAGE_CODE, use_angle_cls=True)
 
-    csv_path = os.path.join(utils.TXT_ROOT, f"ocr_info.csv")
+    csv_path = os.path.join(utils.OUTPUT_ROOT, f"ocr_info.csv")
 
     # 이미지 파일 처리
     for image_file in os.listdir(utils.INPUT_ROOT):
         txt_file = image_file.rstrip('.png')
-        txt_path = os.path.join(utils.TXT_ROOT, f"ocr/{txt_file}_ocr_dete.txt")
-        mean_path = os.path.join(utils.TXT_ROOT, f"ocr/{txt_file}_ocr_mean.txt")
+        txt_path = os.path.join(utils.OUTPUT_ROOT, f"ocr/{txt_file}_ocr_dete.txt")
+        mean_path = os.path.join(utils.OUTPUT_ROOT, f"ocr/{txt_file}_ocr_mean.txt")
         
         image_path = os.path.join(utils.INPUT_ROOT, image_file)
 
@@ -162,7 +149,8 @@ def compare(ocr_path, yolo_path):
     print('comparing start...')
     import ast  # Ensure ast is imported
 
-    ocr = initialize_ocr(language=utils.LANGUAGE_CODE, use_angle_cls=True)
+    # 매칭된 OCR 결과를 저장할 딕셔너리
+    matched_ocr = {}
 
     yolo_dict = {}
     with open(yolo_path, 'r', newline='', encoding='utf-8') as yolo_file:
@@ -181,11 +169,9 @@ def compare(ocr_path, yolo_path):
             yolo_dict[yolo_file_name].append({'boxes': boxes, 'conf': conf})
 
     # 비교 결과를 저장할 디렉토리 설정
-    COMPARE_OUTPUT_DIR = os.path.join("/mnt/sda/coex_data/result_241107_2/preprocessing", "compare_results")
+    COMPARE_OUTPUT_DIR = os.path.join(f"{utils.OUTPUT_ROOT}", "compare_results")
     ensure_directory(COMPARE_OUTPUT_DIR)
 
-    # 매칭된 OCR 결과를 저장할 딕셔너리
-    matched_ocr = {}
 
     with open(ocr_path, 'r', newline='', encoding='utf-8') as ocr_file:
         ocr_reader = csv.DictReader(ocr_file)
@@ -211,12 +197,12 @@ def compare(ocr_path, yolo_path):
                 for yolo_entry in yolo_dict[ocr_file_name]:
                     yolo_box = yolo_entry['boxes']
                     yolo_conf = yolo_entry['conf']
-                    if (float(yolo_box['x1']) < float(ocr_center_x) < float(yolo_box['x2'])) and (float(yolo_box['y1']) < float(ocr_center_y) < float(yolo_box['y2'])):
+                    if (float(yolo_box['x1']) < float(ocr_center_x) < float(yolo_box['x2'])) and (float(yolo_box['y1']) < float(ocr_center_y) < float(yolo_box['y2'])) and float(ocr_conf) > 0.9:
                         # CSV 저장
-                        print(ocr_file_name)
+                        # print(ocr_file_name)
                         txt_file = ocr_file_name.rstrip('.png')
-                        txt_path = os.path.join(utils.TXT_ROOT, f"text/{txt_file}_dete.txt")
-                        mean_path = os.path.join(utils.TXT_ROOT, f"text/{txt_file}_mean.txt")
+                        txt_path = os.path.join(utils.OUTPUT_ROOT, f"text/{txt_file}_dete.txt")
+                        mean_path = os.path.join(utils.OUTPUT_ROOT, f"text/{txt_file}_mean.txt")
 
                         ensure_file(txt_path)
                         ensure_file(mean_path)
@@ -260,7 +246,9 @@ def compare(ocr_path, yolo_path):
             texts = ocr_data['texts']
             ocr_conf = ocr_data['ocr_conf']
             yolo_conf = ocr_data['yolo_conf']
-            
+            # print(f"boxes: {boxes}")
+            # print(f"texts: {texts}")
+            # print(f"scores: {yolo_conf}")
             # 이미지에 OCR 결과 그리기
             im_show = draw_ocr(np.array(image), boxes, texts, yolo_conf, font_path=utils.FONT_PATH)
             im_show = Image.fromarray(im_show)
@@ -274,11 +262,26 @@ def compare(ocr_path, yolo_path):
             logging.error(f"비교 이미지 저장 오류 ({image_path}): {e}")
 
 
-def main():
+def main(output_root):
+    # 실행 시 전달받은 OUTPUT_ROOT 값을 utils 모듈의 변수에 설정
+    utils.OUTPUT_ROOT = output_root
+    utils.INPUT_ROOT = f'{output_root}/images'
+
+    # 이후 필요한 작업 수행
+    print(f"OUTPUT_ROOT 설정 완료: {utils.OUTPUT_ROOT}")
+    print(f"INPUT_ROOT 설정 완료: {utils.INPUT_ROOT}")
+
     make_file()
     ocr_first()
-    # compare("/mnt/sda/coex_data/result_241107_2/preprocessing/ocr_info.csv", "/mnt/sda/coex_data/result_241107_2/preprocessing/yolo_info.csv")
+    compare(f"{utils.OUTPUT_ROOT}/ocr_info.csv", f"{utils.OUTPUT_ROOT}/yolo/yolo_info.csv")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Set OUTPUT_ROOT path for run.py")
+    parser.add_argument(
+        "output_root",
+        type=str,
+        help="Path to the OUTPUT_ROOT directory"
+    )
+    args = parser.parse_args()
+    main(args.output_root)
