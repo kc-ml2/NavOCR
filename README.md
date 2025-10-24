@@ -47,8 +47,8 @@ cd .. && mkdir results
 
 ### Run NavOCR!
 ```bash
-# Fix the directory of RUN_DIR in env.sh
-pip install
+# Fix the directory of RUN_DIR in env.sh first
+./run_nav_ocr.sh
 ```
 
 ## Training Model
