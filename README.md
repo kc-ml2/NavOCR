@@ -38,7 +38,7 @@ git clone git@github.com:kc-ml2/NavOCR.git
 # Setup python env
 pip install -r requirements.txt
 
-# Down
+# Download sample testset
 mkdir data && cd data
 gdown https://drive.google.com/uc?id=1GcgddRm4GsjPKUOVdmWFzeF5gElCZfx2
 unzip example_sequence.zip 
