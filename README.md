@@ -11,8 +11,6 @@ We provide the full pipeline for model training (including data crawling, datase
 Please note that it may contain unstable components.
 Improvements and updates will be released soon.
 
----
-
 <p align="center">
     <img src="./example.svg" alt="NavOCR_example"
 </p>
