@@ -1,0 +1,4 @@
+gdown==5.2.0
+numpy==1.26.4
+opencv-python
+ultralytics==8.3
