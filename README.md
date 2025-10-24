@@ -1,55 +1,67 @@
-# Prominent Text OCR
+# NavOCR
 
-### Project
-##### runOCR
-- first-process: save OCR results hierarchically and create scv file
-- **second-process**: accumulate OCR results and create csv file
-- third-process: compare OCR results with YOLO results
+## Text Detection for Navigation!
 
-##### YOLO-fine-tune
-- fine-tuning code for YOLO model
+NavOCR is an open-source project that provides a lightweight text detection model for navigation.  
+Other publicly available OCR models often work too well and detect texts unrelated to navigation, such as advertisements, logos, or price tags.
+NavOCR detects only the text that is necessary for navigation, such as signboards, directional guides, and room numbers.  
+We provide the full pipeline for model training (including data crawling, dataset preprocessing, and fine-tuning).
 
-##### runYOLO
-- Runs the fine-tuned YOLO model for prominent sign
+❗This repository is currently under heavy refactoring and development.
+Please note that it may contain unstable components.
+Improvements and updates will be released soon.
 
-##### textSLAM-pre-processing
-- paddleOCR: OCR every texts
-- prominentOCR: OCR only prominent texts
+---
 
-### utils
-##### classification
-- use CLIP model to classify only outdoor images of store
+<p align="center">
+    <img src="./example.svg" alt="NavOCR_example"
+</p>
 
-## Create environment
+<p align="center">
+    <img src="./NavOCR.gif" alt="NavOCR" width="572"/>
+</p>
 
-#### create new environment for paddle OCR (python 3.7.16)
 
-download required settings
+## How to Use
 
-```
-pip install -r requirements_ocr.txt
-```
+### Model Download
+Our model is included in this repo. So, clone this repo to download the model!  
+The current model supports detection of store signboards only.
+Detection of other navigation-relevant text types will be supported in future updates.
 
-run OCR code
-
-```
-./scripts/run_first_ocr.sh
-./scripts/run_second_ocr.sh
+```bash
+git clone git@github.com:kc-ml2/NavOCR.git
 ```
 
-#### create new environment for YOLO
+### Setup
+```bash
+# Setup python env
+pip install -r requirements.txt
 
-download required settings
-
+# Down
+mkdir data && cd data
+gdown https://drive.google.com/uc?id=1GcgddRm4GsjPKUOVdmWFzeF5gElCZfx2
+unzip example_sequence.zip 
+cd .. && mkdir results
 ```
-pip install -r requirements_yolo.txt
+
+### Run NavOCR!
+```bash
+# Fix the directory of RUN_DIR in env.sh
+pip install
 ```
 
-#### create new environment for CLIP
+## Training Model
 
-download required settings
+Coming soon! (Dataset crawling, dataset preprocessing, model fine-tuning, ...)
 
-```
-pip install -r requirements_clip.txt
-```
+## 🚧 Planned Updates
+We're working on expanding support beyond store signboards detection model.
+Stay tuned for upcoming features for broader navigation use cases.
+
+- Model training scripts
+- Integration with text recognition (Only detection is available now.)
+- Room number and floor sign detection
+- Directional guide text detection
+- Integration with other SLAM packages via ROS
 
