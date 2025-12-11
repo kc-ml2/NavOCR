@@ -82,16 +82,16 @@ class NavOCRWithOCRNode(Node):
                 text_det_box_thresh=0.4,  # Lower for more detections (was 0.5)  
                 text_recognition_batch_size=32  # Increased from 20 for RTX 4090
             )
-            self.get_logger().info('✓ PaddleOCR initialized with RTX 4090 optimized settings!')
+            self.get_logger().info('PaddleOCR initialized with RTX 4090 optimized settings!')
         except Exception as e:
-            self.get_logger().error(f'✗ PaddleOCR initialization failed: {e}')
+            self.get_logger().error(f'PaddleOCR initialization failed: {e}')
             self.get_logger().warn('   Trying with default parameters...')
             try:
                 # Fallback: absolute minimal parameters
                 self.ocr = PaddleOCR(lang=ocr_lang)
-                self.get_logger().info('✓ PaddleOCR initialized with default settings')
+                self.get_logger().info('PaddleOCR initialized with default settings')
             except Exception as e2:
-                self.get_logger().error(f'✗ Default fallback also failed: {e2}')
+                self.get_logger().error(f'Default fallback also failed: {e2}')
                 raise RuntimeError(f'PaddleOCR initialization failed: {e2}')
         
         # Subscribe to image topic
@@ -167,7 +167,7 @@ class NavOCRWithOCRNode(Node):
                     if 'rec_texts' in result and 'rec_scores' in result:
                         texts = []
                         for text, conf in zip(result['rec_texts'], result['rec_scores']):
-                            if conf > 0.6:  # High confidence only
+                            if conf > 0.6:  # Higher threshold for better accuracy
                                 text = text.strip()
                                 if len(text) > 0:
                                     texts.append(text)
@@ -182,21 +182,21 @@ class NavOCRWithOCRNode(Node):
                         if len(line) > 1:
                             text = line[1][0].strip()
                             conf = line[1][1]
-                            if conf > 0.6 and len(text) > 0:
+                            if conf > 0.6 and len(text) > 0:  # Higher threshold for accuracy
                                 texts.append(text)
                     if texts:
                         recognized_text = ' '.join(texts)
                         recognized_text = ' '.join(recognized_text.split())
             
             if recognized_text:
-                self.get_logger().info(f'✅ OCR: "{recognized_text}" (took {ocr_time:.2f}s)')
+                self.get_logger().info(f'OCR: "{recognized_text}" (took {ocr_time:.2f}s)')
                 return recognized_text
             else:
-                self.get_logger().warn(f'⚠️  OCR: No text found (took {ocr_time:.2f}s)')
+                self.get_logger().warn(f'OCR: No text found (took {ocr_time:.2f}s)')
                 return "no_text_detected"
             
         except Exception as e:
-            self.get_logger().error(f'❌ OCR ERROR: {e}')
+            self.get_logger().error(f'OCR ERROR: {e}')
             return "ocr_error"
 
     # DEPRECATED FUNCTIONS - All manual labeling removed, OCR is always automatic
@@ -363,28 +363,23 @@ class NavOCRWithOCRNode(Node):
                     
                     # **AUTOMATIC OCR** - Always performed, no manual labeling
                     if cropped_image.size > 0:
-                        self.get_logger().info(f"🔍 [Detection {detection_count}] Running OCR...")
+                        self.get_logger().info(f"[Detection {detection_count}] Running OCR...")
                         ocr_text = self.perform_ocr_immediate(cropped_image)
-                        self.get_logger().info(f"✅ [Detection {detection_count}] OCR Result: '{ocr_text}'")
+                        self.get_logger().info(f"[Detection {detection_count}] OCR Result: '{ocr_text}'")
                     else:
-                        self.get_logger().warn(f"⚠️  Empty crop (size={cropped_image.size})")
-                        ocr_text = "empty_crop"
+                        self.get_logger().warn(f"Empty crop (size={cropped_image.size})")
+                        ocr_text = "prominent_sign"
                     
-                    # Skip detection if OCR failed (no valid text detected)
-                    # Don't create markers for failed OCR results
-                    skip_detection = ocr_text in ["no_text_detected", "empty_crop", "ocr_error"]
-                    
-                    if skip_detection:
-                        self.get_logger().warn(f"⏭️  [Detection {detection_count}] Skipping - OCR failed: '{ocr_text}'")
-                        # Still draw on image for debugging, but don't publish detection
-                        self.draw_detection(annotated_image, x1, y1, x2, y2, f"SKIP: {ocr_text}", conf)
-                        continue  # Skip this detection - don't add to detection_array
+                    # Use fallback text if OCR failed, but ALWAYS publish detection
+                    if ocr_text in ["no_text_detected", "empty_crop", "ocr_error"]:
+                        self.get_logger().warn(f"[Detection {detection_count}] OCR failed: '{ocr_text}', using 'prominent_sign'")
+                        ocr_text = "prominent_sign"  # Fallback text
                     
                     # Draw detection on annotated image with OCR text as label
                     self.draw_detection(annotated_image, x1, y1, x2, y2, ocr_text, conf)
-                    self.get_logger().info(f"🎨 [Detection {detection_count}] Drew label: '{ocr_text}' on image")
+                    self.get_logger().info(f"[Detection {detection_count}] Label: '{ocr_text}' bbox=({x1},{y1},{x2},{y2})")
                     
-                    # Create Detection2D message (only for successful OCR)
+                    # Create Detection2D message (ALWAYS publish, even with fallback text)
                     detection = Detection2D()
                     detection.header = msg.header
                     
@@ -403,12 +398,12 @@ class NavOCRWithOCRNode(Node):
                     detection_array.detections.append(detection)
                     
                     self.get_logger().info(
-                        f"✅ Published detection: '{ocr_text}' conf={conf:.2f} bbox=({x1},{y1},{x2},{y2})"
+                        f"Published detection: '{ocr_text}' conf={conf:.2f} bbox=({x1},{y1},{x2},{y2})"
                     )
         
         # Publish detections (모든 OCR 완료된 상태로 발행!)
         self.detection_pub.publish(detection_array)
-        self.get_logger().info(f"📤 Published {len(detection_array.detections)} detections to /navocr/detections")
+        self.get_logger().info(f"Published {len(detection_array.detections)} detections to /navocr/detections")
         
         # Publish annotated image to RViz
         try:
