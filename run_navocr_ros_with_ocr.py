@@ -35,9 +35,9 @@ class NavOCRWithOCRNode(Node):
         super().__init__('navocr_with_ocr_node')
 
         # Parameters
-        self.declare_parameter('model_path', '/home/sehyeon/workspace/src/NavOCR/model/nav_ocr_weight.pt')
+        self.declare_parameter('model_path', '/home/sehyeon/ros2_ws/src/NavOCR/model/nav_ocr_weight.pt')
         self.declare_parameter('confidence_threshold', 0.3)
-        self.declare_parameter('output_dir', '/home/sehyeon/workspace/src/NavOCR/results/ros_result_ocr')
+        self.declare_parameter('output_dir', '/home/sehyeon/ros2_ws/src/NavOCR/results/ros_result_ocr')
         self.declare_parameter('ocr_language', 'korean')  # 'korean' for Korean+English mixed text
         self.declare_parameter('image_publish_rate', 2.0)  # Hz - limit RViz update rate
         
@@ -370,33 +370,38 @@ class NavOCRWithOCRNode(Node):
                         self.get_logger().warn(f"Empty crop (size={cropped_image.size})")
                         ocr_text = "prominent_sign"
                     
-                    # Use fallback text if OCR failed, but ALWAYS publish detection
+                    # Skip detection if OCR failed - only publish text with actual OCR recognition
                     if ocr_text in ["no_text_detected", "empty_crop", "ocr_error"]:
-                        self.get_logger().warn(f"[Detection {detection_count}] OCR failed: '{ocr_text}', using 'prominent_sign'")
-                        ocr_text = "prominent_sign"  # Fallback text
-                    
+                        self.get_logger().info(
+                            f"[Detection {detection_count}] OCR failed: '{ocr_text}', skipping detection "
+                            f"(bbox=({x1},{y1},{x2},{y2}), conf={conf:.2f})"
+                        )
+                        # Still draw on annotated image for debugging (shows what YOLO detected)
+                        self.draw_detection(annotated_image, x1, y1, x2, y2, "prominent_sign", conf)
+                        continue  # Skip this detection, don't add to detection_array
+
                     # Draw detection on annotated image with OCR text as label
                     self.draw_detection(annotated_image, x1, y1, x2, y2, ocr_text, conf)
                     self.get_logger().info(f"[Detection {detection_count}] Label: '{ocr_text}' bbox=({x1},{y1},{x2},{y2})")
-                    
-                    # Create Detection2D message (ALWAYS publish, even with fallback text)
+
+                    # Create Detection2D message (ONLY for successful OCR)
                     detection = Detection2D()
                     detection.header = msg.header
-                    
+
                     # Bounding box
                     detection.bbox.center.position.x = float((x1 + x2) / 2.0)
                     detection.bbox.center.position.y = float((y1 + y2) / 2.0)
                     detection.bbox.size_x = float(x2 - x1)
                     detection.bbox.size_y = float(y2 - y1)
-                    
+
                     # Confidence with OCR text
                     hypothesis = ObjectHypothesisWithPose()
                     hypothesis.hypothesis.class_id = ocr_text  # OCR text as class ID
                     hypothesis.hypothesis.score = conf
                     detection.results.append(hypothesis)
-                    
+
                     detection_array.detections.append(detection)
-                    
+
                     self.get_logger().info(
                         f"Published detection: '{ocr_text}' conf={conf:.2f} bbox=({x1},{y1},{x2},{y2})"
                     )
