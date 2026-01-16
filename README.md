@@ -57,6 +57,7 @@ Coming soon! (Dataset crawling, dataset preprocessing, model fine-tuning, ...)
 We're working on expanding support beyond store signboards detection model.
 Stay tuned for upcoming features for broader navigation use cases.
 
+- Library migration due to a license issue (`ultralytics` -> `PaddleDetection`)
 - Model training scripts
 - Integration with text recognition (Only detection is available now.)
 - Room number and floor sign detection
