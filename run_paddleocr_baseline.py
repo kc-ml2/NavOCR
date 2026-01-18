@@ -105,6 +105,7 @@ class PaddleOCRBaselineNode(Node):
         )
 
         self.frame_id = 0
+        self.first_frame_logged = False  # For one-time image info logging
 
         # Performance metrics
         self.total_processing_time = 0.0
@@ -211,8 +212,36 @@ class PaddleOCRBaselineNode(Node):
         start_time = time.time()
 
         # ROS Image -> OpenCV
+        # Handle both color and grayscale (infrared) images
         try:
-            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+            # Log image info on first frame
+            if not self.first_frame_logged:
+                self.get_logger().info(f"First frame received: encoding={msg.encoding}, "
+                                       f"size={msg.width}x{msg.height}")
+                self.first_frame_logged = True
+
+            # First try passthrough to get original format
+            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
+
+            # Check if grayscale (infrared image is mono8 or mono16)
+            if len(cv_image.shape) == 2 or cv_image.shape[2] == 1:
+                # Grayscale image - apply preprocessing for better OCR
+                # Normalize if mono16
+                if cv_image.dtype == np.uint16:
+                    cv_image = (cv_image / 256).astype(np.uint8)
+
+                # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
+                # This improves contrast for infrared images which often have low contrast
+                clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+                cv_image = clahe.apply(cv_image)
+
+                # Convert to BGR for PaddleOCR
+                cv_image = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2BGR)
+                self.get_logger().debug(f"Preprocessed infrared image: {cv_image.shape}")
+            elif cv_image.shape[2] == 3:
+                # Already BGR or RGB
+                pass
+
         except Exception as e:
             self.get_logger().error(f"cv_bridge conversion failed: {e}")
             return
@@ -233,10 +262,16 @@ class PaddleOCRBaselineNode(Node):
         ocr_time = time.time() - ocr_start
 
         frame_detections = 0
+        raw_detections = 0  # Count before filtering
 
         # Process OCR results
         if results and len(results) > 0:
             result = results[0]
+
+            # Log raw OCR result structure on first few frames for debugging
+            if self.frame_id < 3:
+                self.get_logger().info(f"Frame {self.frame_id}: OCR result type={type(result)}, "
+                                       f"result={result}")
 
             if result is not None:
                 # Handle different PaddleOCR API formats
@@ -246,27 +281,29 @@ class PaddleOCRBaselineNode(Node):
                         polygons = result['det_polygons']
                         texts = result['rec_texts']
                         scores = result['rec_scores']
+                        raw_detections = len(texts)
 
                         for polygon, text, score in zip(polygons, texts, scores):
-                            self._process_detection(
+                            if self._process_detection(
                                 polygon, text, score,
                                 msg.header, detection_array, annotated_image
-                            )
-                            frame_detections += 1
+                            ):
+                                frame_detections += 1
 
                 elif isinstance(result, list):
                     # Old API format: list of [polygon, (text, confidence)]
+                    raw_detections = len(result)
                     for line in result:
                         if len(line) >= 2:
                             polygon = line[0]
                             text = line[1][0]
                             score = line[1][1]
 
-                            self._process_detection(
+                            if self._process_detection(
                                 polygon, text, score,
                                 msg.header, detection_array, annotated_image
-                            )
-                            frame_detections += 1
+                            ):
+                                frame_detections += 1
 
         # Publish detections
         self.detection_pub.publish(detection_array)
@@ -293,20 +330,22 @@ class PaddleOCRBaselineNode(Node):
 
             avg_time = self.total_processing_time / self.frame_count
             self.get_logger().info(
-                f"Frame {self.frame_id}: {len(detection_array.detections)} detections | "
+                f"Frame {self.frame_id}: {len(detection_array.detections)}/{raw_detections} detections (after/before filter) | "
                 f"OCR: {ocr_time:.3f}s | Total: {total_time:.3f}s | Avg: {avg_time:.3f}s"
             )
 
     def _process_detection(self, polygon, text, score, header, detection_array, annotated_image):
-        """Process a single detection and add to array if valid"""
+        """Process a single detection and add to array if valid. Returns True if added."""
         # Filter by confidence
         if score < self.conf_threshold:
-            return
+            self.get_logger().debug(f"Filtered by confidence: '{text}' conf={score:.2f} < {self.conf_threshold}")
+            return False
 
         # Filter by text length
         text = text.strip()
         if len(text) < self.min_text_length:
-            return
+            self.get_logger().debug(f"Filtered by text length: '{text}' len={len(text)} < {self.min_text_length}")
+            return False
 
         # Convert polygon to bbox
         x1, y1, x2, y2 = self.polygon_to_bbox(polygon)
@@ -314,7 +353,8 @@ class PaddleOCRBaselineNode(Node):
         # Filter by box area
         area = (x2 - x1) * (y2 - y1)
         if area < self.min_box_area:
-            return
+            self.get_logger().debug(f"Filtered by box area: '{text}' area={area} < {self.min_box_area}")
+            return False
 
         # Draw on annotated image
         self.draw_detection(annotated_image, x1, y1, x2, y2, text, score)
@@ -337,9 +377,10 @@ class PaddleOCRBaselineNode(Node):
 
         detection_array.detections.append(detection)
 
-        self.get_logger().debug(
-            f"Detection: '{text}' conf={score:.2f} bbox=({x1},{y1},{x2},{y2})"
+        self.get_logger().info(
+            f"Valid detection: '{text}' conf={score:.2f} bbox=({x1},{y1},{x2},{y2})"
         )
+        return True
 
     def destroy_node(self):
         """Print final statistics on shutdown and save to file"""
