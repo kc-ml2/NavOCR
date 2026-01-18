@@ -38,7 +38,7 @@ class NavOCRWithOCRNode(Node):
         self.declare_parameter('model_path', '/home/sehyeon/ros2_ws/src/NavOCR/model/nav_ocr_weight.pt')
         self.declare_parameter('confidence_threshold', 0.3)
         self.declare_parameter('output_dir', '/home/sehyeon/ros2_ws/src/NavOCR/results/ros_result_ocr')
-        self.declare_parameter('ocr_language', 'korean')  # 'korean' for Korean+English mixed text
+        self.declare_parameter('ocr_language', 'en')  # 'en' for English only
         self.declare_parameter('image_publish_rate', 2.0)  # Hz - limit RViz update rate
         
         # Get parameters
