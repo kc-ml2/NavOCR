@@ -246,6 +246,12 @@ class PaddleOCRBaselineNode(Node):
             self.get_logger().error(f"cv_bridge conversion failed: {e}")
             return
 
+        # Save first few preprocessed images for debugging
+        if self.frame_id < 3:
+            debug_file = os.path.join(self.output_dir, f"debug_preprocessed_{self.frame_id}.png")
+            cv2.imwrite(debug_file, cv_image)
+            self.get_logger().info(f"Saved preprocessed image: {debug_file} shape={cv_image.shape} dtype={cv_image.dtype}")
+
         annotated_image = cv_image.copy()
 
         # Create detection message
@@ -264,14 +270,18 @@ class PaddleOCRBaselineNode(Node):
         frame_detections = 0
         raw_detections = 0  # Count before filtering
 
+        # Always log OCR results for first few frames (before frame_id increment)
+        if self.frame_id < 5:
+            self.get_logger().info(f"Frame {self.frame_id}: OCR results={results}")
+
         # Process OCR results
         if results and len(results) > 0:
             result = results[0]
 
             # Log raw OCR result structure on first few frames for debugging
-            if self.frame_id < 3:
-                self.get_logger().info(f"Frame {self.frame_id}: OCR result type={type(result)}, "
-                                       f"result={result}")
+            if self.frame_id < 5:
+                self.get_logger().info(f"Frame {self.frame_id}: result[0] type={type(result)}, "
+                                       f"content={result}")
 
             if result is not None:
                 # Handle different PaddleOCR API formats
