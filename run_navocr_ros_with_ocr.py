@@ -116,10 +116,17 @@ class NavOCRWithOCRNode(Node):
         )
         
         self.frame_id = 0
-        
+
         # Performance mode: No caching, immediate OCR
         # Remove all caching and queue mechanisms for maximum performance
-        
+
+        # Performance metrics (same as PaddleOCR baseline for fair comparison)
+        self.total_processing_time = 0.0
+        self.frame_count = 0
+        self.detection_count = 0
+        self.total_yolo_time = 0.0
+        self.total_ocr_time = 0.0
+
         self.get_logger().info('='*60)
         self.get_logger().info('NavOCR with OCR Node Started!')
         self.get_logger().info(f'Confidence threshold: {self.conf_threshold}')
@@ -317,6 +324,8 @@ class NavOCRWithOCRNode(Node):
         """
         Callback for image topic - PERFORMANCE MODE (No caching, immediate OCR)
         """
+        frame_start_time = time.time()
+
         # ROS Image → OpenCV
         try:
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
@@ -325,7 +334,9 @@ class NavOCRWithOCRNode(Node):
             return
 
         # YOLO inference
+        yolo_start = time.time()
         results = self.model(cv_image, conf=self.conf_threshold)
+        yolo_time = time.time() - yolo_start
 
         # Create annotated image (copy for drawing)
         annotated_image = cv_image.copy()
@@ -335,7 +346,8 @@ class NavOCRWithOCRNode(Node):
         detection_array.header = msg.header
         
         detection_count = 0
-        
+        frame_ocr_time = 0.0
+
         # Process YOLO results
         if results and len(results) > 0:
             result = results[0]
@@ -364,7 +376,10 @@ class NavOCRWithOCRNode(Node):
                     # **AUTOMATIC OCR** - Always performed, no manual labeling
                     if cropped_image.size > 0:
                         self.get_logger().info(f"[Detection {detection_count}] Running OCR...")
+                        ocr_start = time.time()
                         ocr_text = self.perform_ocr_immediate(cropped_image)
+                        ocr_time_single = time.time() - ocr_start
+                        frame_ocr_time += ocr_time_single
                         self.get_logger().info(f"[Detection {detection_count}] OCR Result: '{ocr_text}'")
                     else:
                         self.get_logger().warn(f"Empty crop (size={cropped_image.size})")
@@ -418,22 +433,73 @@ class NavOCRWithOCRNode(Node):
         except Exception as e:
             self.get_logger().error(f"Failed to publish annotated image: {e}")
         
+        # Update performance metrics
+        total_time = time.time() - frame_start_time
+        self.total_processing_time += total_time
+        self.frame_count += 1
+        self.detection_count += len(detection_array.detections)
+        self.total_yolo_time += yolo_time
+        self.total_ocr_time += frame_ocr_time
+
         # Save image to file (rate limit file saving to reduce disk I/O)
         self.frame_id += 1
         if self.frame_id % 10 == 0:  # Save every 10th frame only
             filename = os.path.join(self.output_dir, f"frame_{self.frame_id:06d}.png")
             cv2.imwrite(filename, annotated_image)
-            
-            # Log status (only when saving)
-            if detection_count > 0:
-                self.get_logger().info(
-                    f"Frame {self.frame_id}: {detection_count} detections | Saved: {filename}"
-                )
+
+            # Log status with timing (same format as PaddleOCR baseline)
+            avg_time = self.total_processing_time / self.frame_count
+            self.get_logger().info(
+                f"Frame {self.frame_id}: {detection_count} detections | "
+                f"YOLO: {yolo_time:.3f}s | OCR: {frame_ocr_time:.3f}s | "
+                f"Total: {total_time:.3f}s | Avg: {avg_time:.3f}s"
+            )
+
+
+    def destroy_node(self):
+        """Print final statistics on shutdown and save to file"""
+        if self.frame_count > 0:
+            avg_time = self.total_processing_time / self.frame_count
+            avg_yolo = self.total_yolo_time / self.frame_count
+            avg_ocr = self.total_ocr_time / self.frame_count
+            avg_detections = self.detection_count / self.frame_count
+
+            # Print to terminal
+            self.get_logger().info('='*60)
+            self.get_logger().info('NavOCR (YOLO+OCR) Final Statistics:')
+            self.get_logger().info(f'  Total frames: {self.frame_count}')
+            self.get_logger().info(f'  Total detections: {self.detection_count}')
+            self.get_logger().info(f'  Avg detections/frame: {avg_detections:.2f}')
+            self.get_logger().info(f'  Avg YOLO time: {avg_yolo:.3f}s')
+            self.get_logger().info(f'  Avg OCR time: {avg_ocr:.3f}s')
+            self.get_logger().info(f'  Avg processing time: {avg_time:.3f}s')
+            self.get_logger().info(f'  Avg FPS: {1.0/avg_time:.2f}')
+            self.get_logger().info('='*60)
+
+            # Save to file
+            timing_file = os.path.join(self.output_dir, 'timing_statistics.txt')
+            try:
+                with open(timing_file, 'w') as f:
+                    f.write('=== NavOCR (YOLO+OCR) Timing Statistics ===\n')
+                    f.write(f'Total frames: {self.frame_count}\n')
+                    f.write(f'Total detections: {self.detection_count}\n')
+                    f.write(f'Avg detections/frame: {avg_detections:.2f}\n')
+                    f.write(f'Total processing time: {self.total_processing_time:.3f}s\n')
+                    f.write(f'Avg YOLO time: {avg_yolo:.3f}s\n')
+                    f.write(f'Avg OCR time: {avg_ocr:.3f}s\n')
+                    f.write(f'Avg processing time: {avg_time:.3f}s\n')
+                    f.write(f'Avg FPS: {1.0/avg_time:.2f}\n')
+                self.get_logger().info(f'Timing statistics saved to: {timing_file}')
+            except Exception as e:
+                self.get_logger().error(f'Failed to save timing statistics: {e}')
+
+        super().destroy_node()
 
 
 def main():
     rclpy.init()
-    
+
+    node = None
     try:
         node = NavOCRWithOCRNode()
         rclpy.spin(node)
@@ -442,6 +508,8 @@ def main():
     except Exception as e:
         print(f'Error: {e}')
     finally:
+        if node is not None:
+            node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
 

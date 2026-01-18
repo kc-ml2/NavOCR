@@ -342,10 +342,12 @@ class PaddleOCRBaselineNode(Node):
         )
 
     def destroy_node(self):
-        """Print final statistics on shutdown"""
+        """Print final statistics on shutdown and save to file"""
         if self.frame_count > 0:
             avg_time = self.total_processing_time / self.frame_count
             avg_detections = self.detection_count / self.frame_count
+
+            # Print to terminal
             self.get_logger().info('='*60)
             self.get_logger().info('PaddleOCR Baseline Final Statistics:')
             self.get_logger().info(f'  Total frames: {self.frame_count}')
@@ -354,6 +356,22 @@ class PaddleOCRBaselineNode(Node):
             self.get_logger().info(f'  Avg processing time: {avg_time:.3f}s')
             self.get_logger().info(f'  Avg FPS: {1.0/avg_time:.2f}')
             self.get_logger().info('='*60)
+
+            # Save to file
+            timing_file = os.path.join(self.output_dir, 'timing_statistics.txt')
+            try:
+                with open(timing_file, 'w') as f:
+                    f.write('=== PaddleOCR Baseline Timing Statistics ===\n')
+                    f.write(f'Total frames: {self.frame_count}\n')
+                    f.write(f'Total detections: {self.detection_count}\n')
+                    f.write(f'Avg detections/frame: {avg_detections:.2f}\n')
+                    f.write(f'Total processing time: {self.total_processing_time:.3f}s\n')
+                    f.write(f'Avg processing time: {avg_time:.3f}s\n')
+                    f.write(f'Avg FPS: {1.0/avg_time:.2f}\n')
+                self.get_logger().info(f'Timing statistics saved to: {timing_file}')
+            except Exception as e:
+                self.get_logger().error(f'Failed to save timing statistics: {e}')
+
         super().destroy_node()
 
 
