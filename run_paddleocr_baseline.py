@@ -286,19 +286,29 @@ class PaddleOCRBaselineNode(Node):
             if result is not None:
                 # Handle different PaddleOCR API formats
                 if isinstance(result, dict):
-                    # New API format
-                    if 'rec_texts' in result and 'rec_scores' in result and 'det_polygons' in result:
-                        polygons = result['det_polygons']
-                        texts = result['rec_texts']
-                        scores = result['rec_scores']
-                        raw_detections = len(texts)
+                    # New API format - check for rec_polys or dt_polys (PaddleOCR 2.6+)
+                    if 'rec_texts' in result and 'rec_scores' in result:
+                        # Get polygons from available key (rec_polys, dt_polys, or det_polygons)
+                        polygons = None
+                        for poly_key in ['rec_polys', 'dt_polys', 'det_polygons']:
+                            if poly_key in result:
+                                polygons = result[poly_key]
+                                break
 
-                        for polygon, text, score in zip(polygons, texts, scores):
-                            if self._process_detection(
-                                polygon, text, score,
-                                msg.header, detection_array, annotated_image
-                            ):
-                                frame_detections += 1
+                        if polygons is not None:
+                            texts = result['rec_texts']
+                            scores = result['rec_scores']
+                            raw_detections = len(texts)
+
+                            for polygon, text, score in zip(polygons, texts, scores):
+                                if self._process_detection(
+                                    polygon, text, score,
+                                    msg.header, detection_array, annotated_image
+                                ):
+                                    frame_detections += 1
+                        else:
+                            self.get_logger().warn(f"Frame {self.frame_id}: No polygon key found in result. "
+                                                   f"Available keys: {list(result.keys())}")
 
                 elif isinstance(result, list):
                     # Old API format: list of [polygon, (text, confidence)]
