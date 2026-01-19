@@ -40,6 +40,7 @@ class NavOCRWithOCRNode(Node):
         self.declare_parameter('output_dir', '/home/sehyeon/ros2_ws/src/NavOCR/results/ros_result_ocr')
         self.declare_parameter('ocr_language', 'en')  # 'en' for English only
         self.declare_parameter('image_publish_rate', 2.0)  # Hz - limit RViz update rate
+        self.declare_parameter('session_name', '')  # Session name for unique output files (e.g., rosbag name)
         
         # Get parameters
         model_path = self.get_parameter('model_path').value
@@ -47,6 +48,15 @@ class NavOCRWithOCRNode(Node):
         self.output_dir = self.get_parameter('output_dir').value
         ocr_lang = self.get_parameter('ocr_language').value
         self.image_publish_rate = self.get_parameter('image_publish_rate').value
+        self.session_name = self.get_parameter('session_name').value
+        
+        # Generate session name from timestamp if not provided
+        if not self.session_name:
+            from datetime import datetime
+            self.session_name = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        # Log session info
+        self.get_logger().info(f'Session name: {self.session_name}')
         
         # OCR is ALWAYS enabled - no option to disable
         self.enable_ocr = True
@@ -476,11 +486,12 @@ class NavOCRWithOCRNode(Node):
             self.get_logger().info(f'  Avg FPS: {1.0/avg_time:.2f}')
             self.get_logger().info('='*60)
 
-            # Save to file
-            timing_file = os.path.join(self.output_dir, 'timing_statistics.txt')
+            # Save to file with session name
+            timing_file = os.path.join(self.output_dir, f'{self.session_name}_timing.txt')
             try:
                 with open(timing_file, 'w') as f:
                     f.write('=== NavOCR (YOLO+OCR) Timing Statistics ===\n')
+                    f.write(f'Session: {self.session_name}\n\n')
                     f.write(f'Total frames: {self.frame_count}\n')
                     f.write(f'Total detections: {self.detection_count}\n')
                     f.write(f'Avg detections/frame: {avg_detections:.2f}\n')

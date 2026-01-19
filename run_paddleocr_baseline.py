@@ -47,6 +47,7 @@ class PaddleOCRBaselineNode(Node):
         self.declare_parameter('ocr_language', 'korean')
         self.declare_parameter('min_text_length', 2)  # Minimum text length to consider
         self.declare_parameter('min_box_area', 500)   # Minimum bounding box area (pixels^2)
+        self.declare_parameter('session_name', '')    # Session name for unique output files
 
         # Get parameters
         self.conf_threshold = self.get_parameter('confidence_threshold').value
@@ -54,6 +55,12 @@ class PaddleOCRBaselineNode(Node):
         ocr_lang = self.get_parameter('ocr_language').value
         self.min_text_length = self.get_parameter('min_text_length').value
         self.min_box_area = self.get_parameter('min_box_area').value
+        self.session_name = self.get_parameter('session_name').value
+
+        # Generate session name from timestamp if not provided
+        if not self.session_name:
+            from datetime import datetime
+            self.session_name = datetime.now().strftime('%Y%m%d_%H%M%S')
 
         # Create output directory
         os.makedirs(self.output_dir, exist_ok=True)
@@ -418,11 +425,12 @@ class PaddleOCRBaselineNode(Node):
             self.get_logger().info(f'  Avg FPS: {1.0/avg_time:.2f}')
             self.get_logger().info('='*60)
 
-            # Save to file
-            timing_file = os.path.join(self.output_dir, 'timing_statistics.txt')
+            # Save to file with session name
+            timing_file = os.path.join(self.output_dir, f'{self.session_name}_timing.txt')
             try:
                 with open(timing_file, 'w') as f:
-                    f.write('=== PaddleOCR Baseline Timing Statistics ===\n')
+                    f.write(f'=== PaddleOCR Timing Statistics ===\n')
+                    f.write(f'Session: {self.session_name}\n\n')
                     f.write(f'Total frames: {self.frame_count}\n')
                     f.write(f'Total detections: {self.detection_count}\n')
                     f.write(f'Avg detections/frame: {avg_detections:.2f}\n')
