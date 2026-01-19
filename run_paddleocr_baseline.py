@@ -439,6 +439,7 @@ class PaddleOCRBaselineNode(Node):
 def main():
     rclpy.init()
 
+    node = None
     try:
         node = PaddleOCRBaselineNode()
         rclpy.spin(node)
@@ -447,6 +448,8 @@ def main():
     except Exception as e:
         print(f'Error: {e}')
     finally:
+        if node is not None:
+            node.destroy_node()  # This triggers timing statistics save
         if rclpy.ok():
             rclpy.shutdown()
 
