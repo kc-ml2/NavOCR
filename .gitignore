@@ -1,6 +1,7 @@
 *.pyc
 __pycache__*
 .pytest_cache/
+.cache/
 __init__.py
 data
 results

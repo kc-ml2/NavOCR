@@ -1,0 +1,21 @@
+_BASE_: [
+  '../datasets/coco_detection.yml',
+  '../runtime.yml',
+  './_base_/optimizer_300e.yml',
+  './_base_/ppyoloe_crn.yml',
+  './_base_/ppyoloe_reader.yml',
+]
+
+log_iter: 100
+snapshot_epoch: 10
+weights: model/navocr.pdparams
+
+depth_mult: 0.33
+width_mult: 0.50
+
+# ====== My dataset override ======
+num_classes: 1
+
+TestDataset:
+  dataset_dir: dataset/metadata
+  anno_path: annotations/instances_test.json
