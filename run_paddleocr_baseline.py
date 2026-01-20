@@ -121,6 +121,7 @@ class PaddleOCRBaselineNode(Node):
         self.frame_count = 0
         self.detection_count = 0
         self.wall_clock_start = None  # Track actual elapsed time for fair comparison
+        self.wall_clock_end = None    # Track last frame time (excludes Ctrl+C wait time)
 
         self.get_logger().info('='*60)
         self.get_logger().info('PaddleOCR Baseline Node Started!')
@@ -355,6 +356,7 @@ class PaddleOCRBaselineNode(Node):
         self.total_processing_time += total_time
         self.frame_count += 1
         self.detection_count += len(detection_array.detections)
+        self.wall_clock_end = time.time()  # Update end time on every frame
 
         # Save frame periodically
         self.frame_id += 1
@@ -423,9 +425,10 @@ class PaddleOCRBaselineNode(Node):
             avg_detections = self.detection_count / self.frame_count
             
             # Calculate wall clock elapsed time for fair comparison with TextSLAM
+            # Uses wall_clock_end (last frame time) instead of current time to exclude Ctrl+C wait
             wall_clock_elapsed = 0.0
-            if self.wall_clock_start is not None:
-                wall_clock_elapsed = time.time() - self.wall_clock_start
+            if self.wall_clock_start is not None and self.wall_clock_end is not None:
+                wall_clock_elapsed = self.wall_clock_end - self.wall_clock_start
             
             # Throughput FPS = frames processed / wall clock time (comparable to TextSLAM)
             throughput_fps = self.frame_count / wall_clock_elapsed if wall_clock_elapsed > 0 else 0

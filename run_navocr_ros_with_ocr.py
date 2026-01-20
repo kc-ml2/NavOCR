@@ -143,6 +143,7 @@ class NavOCRWithOCRNode(Node):
         self.total_yolo_time = 0.0
         self.total_ocr_time = 0.0
         self.wall_clock_start = None  # Track actual elapsed time for fair comparison
+        self.wall_clock_end = None    # Track last frame time (excludes Ctrl+C wait time)
 
         self.get_logger().info('='*60)
         self.get_logger().info('NavOCR with OCR Node Started!')
@@ -461,6 +462,7 @@ class NavOCRWithOCRNode(Node):
         self.detection_count += len(detection_array.detections)
         self.total_yolo_time += yolo_time
         self.total_ocr_time += frame_ocr_time
+        self.wall_clock_end = time.time()  # Update end time on every frame
 
         # Save image to file (rate limit file saving to reduce disk I/O)
         self.frame_id += 1
@@ -486,9 +488,10 @@ class NavOCRWithOCRNode(Node):
             avg_detections = self.detection_count / self.frame_count
             
             # Calculate wall clock elapsed time for fair comparison with TextSLAM
+            # Uses wall_clock_end (last frame time) instead of current time to exclude Ctrl+C wait
             wall_clock_elapsed = 0.0
-            if self.wall_clock_start is not None:
-                wall_clock_elapsed = time.time() - self.wall_clock_start
+            if self.wall_clock_start is not None and self.wall_clock_end is not None:
+                wall_clock_elapsed = self.wall_clock_end - self.wall_clock_start
             
             # Throughput FPS = frames processed / wall clock time (comparable to TextSLAM)
             throughput_fps = self.frame_count / wall_clock_elapsed if wall_clock_elapsed > 0 else 0
