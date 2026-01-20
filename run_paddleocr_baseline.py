@@ -234,7 +234,7 @@ class PaddleOCRBaselineNode(Node):
 
             # First try passthrough to get original format
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
-
+        
             # Check if grayscale (infrared image is mono8 or mono16)
             if len(cv_image.shape) == 2 or cv_image.shape[2] == 1:
                 # Grayscale image - apply preprocessing for better OCR
@@ -434,14 +434,9 @@ class PaddleOCRBaselineNode(Node):
             self.get_logger().info(f'  Total frames processed: {self.frame_count}')
             self.get_logger().info(f'  Total detections: {self.detection_count}')
             self.get_logger().info(f'  Avg detections/frame: {avg_detections:.2f}')
-            self.get_logger().info(f'  --- Processing Speed ---')
             self.get_logger().info(f'  Avg processing time per frame: {avg_time:.3f}s')
-            self.get_logger().info(f'  Processing FPS (1/avg_time): {1.0/avg_time:.2f}')
-            self.get_logger().info(f'  --- Throughput (comparable to TextSLAM) ---')
             self.get_logger().info(f'  Wall clock elapsed: {wall_clock_elapsed:.2f}s')
-            self.get_logger().info(f'  Throughput FPS (frames/wall_time): {throughput_fps:.2f}')
-            self.get_logger().info(f'  NOTE: Throughput FPS is low due to frame dropping in ROS')
-            self.get_logger().info(f'  For fair comparison, use benchmark_offline.py')
+            self.get_logger().info(f'  Throughput FPS: {throughput_fps:.2f}')
             self.get_logger().info('='*60)
 
             # Save to file with session name
@@ -453,15 +448,10 @@ class PaddleOCRBaselineNode(Node):
                     f.write(f'Total frames processed: {self.frame_count}\n')
                     f.write(f'Total detections: {self.detection_count}\n')
                     f.write(f'Avg detections/frame: {avg_detections:.2f}\n\n')
-                    f.write(f'--- Processing Speed ---\n')
                     f.write(f'Total processing time: {self.total_processing_time:.3f}s\n')
                     f.write(f'Avg processing time per frame: {avg_time:.3f}s\n')
-                    f.write(f'Processing FPS (1/avg_time): {1.0/avg_time:.2f}\n\n')
-                    f.write(f'--- Throughput (comparable to TextSLAM) ---\n')
                     f.write(f'Wall clock elapsed: {wall_clock_elapsed:.2f}s\n')
-                    f.write(f'Throughput FPS (frames/wall_time): {throughput_fps:.2f}\n')
-                    f.write(f'NOTE: Throughput FPS is low due to frame dropping in ROS.\n')
-                    f.write(f'For fair comparison with TextSLAM, use benchmark_offline.py\n')
+                    f.write(f'Throughput FPS: {throughput_fps:.2f}\n')
                 self.get_logger().info(f'Timing statistics saved to: {timing_file}')
             except Exception as e:
                 self.get_logger().error(f'Failed to save timing statistics: {e}')
