@@ -44,7 +44,7 @@ class PaddleOCRBaselineNode(Node):
         # Parameters
         self.declare_parameter('confidence_threshold', 0.3)  # OCR confidence threshold (lowered from 0.6)
         self.declare_parameter('output_dir', '/home/sehyeon/ros2_ws/src/NavOCR/results/paddleocr_baseline')
-        self.declare_parameter('ocr_language', 'korean')
+        self.declare_parameter('ocr_language', 'en')
         self.declare_parameter('min_text_length', 2)  # Minimum text length to consider
         self.declare_parameter('min_box_area', 500)   # Minimum bounding box area (pixels^2)
         self.declare_parameter('session_name', '')    # Session name for unique output files
@@ -75,15 +75,17 @@ class PaddleOCRBaselineNode(Node):
 
         self.get_logger().info(f'Initializing PaddleOCR (language: {ocr_lang})...')
         try:
-            # RTX 4090 optimized settings - same as NavOCR for fair comparison
+            # RTX 4090 optimized settings - same as NavOCR for fair comparison with GPU enabled
             self.ocr = PaddleOCR(
+                use_gpu=True,  # Enable GPU for PaddleOCR
+                gpu_mem_fraction=1.0,  # Use 80% of GPU memory
                 lang=ocr_lang,
                 use_textline_orientation=True,
                 text_det_thresh=0.25,
                 text_det_box_thresh=0.4,
                 text_recognition_batch_size=32
             )
-            self.get_logger().info('PaddleOCR initialized successfully!')
+            self.get_logger().info('PaddleOCR initialized with GPU enabled!')
         except Exception as e:
             self.get_logger().error(f'PaddleOCR initialization failed: {e}')
             self.get_logger().warn('Trying with default parameters...')

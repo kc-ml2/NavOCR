@@ -74,6 +74,12 @@ class NavOCRWithOCRNode(Node):
         # Load YOLO model
         self.get_logger().info(f'Loading YOLO model from: {model_path}')
         self.model = YOLO(model_path)
+        # Verify GPU is available and model is on GPU
+        import torch
+        if torch.cuda.is_available():
+            self.get_logger().info(f'CUDA available: {torch.cuda.is_available()}, Device: {torch.cuda.get_device_name(0)}')
+        else:
+            self.get_logger().warning('CUDA not available! Model will run on CPU (very slow)')
         self.get_logger().info('YOLO model loaded successfully')
         
         # Initialize PaddleOCR (GPU-optimized for better accuracy) - ALWAYS ENABLED
@@ -84,9 +90,9 @@ class NavOCRWithOCRNode(Node):
         
         self.get_logger().info(f'Initializing PaddleOCR (language: {ocr_lang})...')
         try:
-            # RTX 4090 optimized - maximum performance!
+            # RTX 4090 optimized - maximum performance with GPU!
             self.ocr = PaddleOCR(
-                lang=ocr_lang,
+                use_gpu=True,  # Enable GPU for PaddleOCR                gpu_mem_fraction=0.8,  # Use 80% of GPU memory                lang=ocr_lang,
                 use_textline_orientation=True,  # Enable text orientation detection
                 text_det_thresh=0.25,  # Lower for better recall (was 0.3)
                 text_det_box_thresh=0.4,  # Lower for more detections (was 0.5)  
@@ -348,9 +354,9 @@ class NavOCRWithOCRNode(Node):
             self.get_logger().error(f"cv_bridge conversion failed: {e}")
             return
 
-        # YOLO inference
+        # YOLO inference (explicitly on GPU device 0)
         yolo_start = time.time()
-        results = self.model(cv_image, conf=self.conf_threshold)
+        results = self.model.predict(cv_image, conf=self.conf_threshold, device=0, verbose=False)
         yolo_time = time.time() - yolo_start
 
         # Create annotated image (copy for drawing)
