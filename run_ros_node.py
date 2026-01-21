@@ -12,7 +12,6 @@ def parse_args():
     # Arguments for PaddleDetection
     parser.add_argument("--output_dir", type=str, default="results/ros_result", help="Directory to save output images.")
     parser.add_argument("--draw_threshold", type=float, default=0.5, help="Confidence threshold for detection.")
-    parser.add_argument("--exts", type=str, default="jpg,jpeg,png,bmp", help="Image extensions.")
     
     return parser.parse_args()
 
