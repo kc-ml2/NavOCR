@@ -11,8 +11,6 @@ We provide the full pipeline for model training (including data crawling, datase
 Please note that it may contain unstable components.
 Improvements and updates will be released soon.
 
-❗We are migrating our library to ensure Apache-2.0 license compliance, specifically moving from `ultralytics` to `PaddleDetection`.
-
 <p align="center">
     <img src="./example.svg" alt="NavOCR_example"
 </p>
