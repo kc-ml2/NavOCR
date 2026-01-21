@@ -36,6 +36,7 @@ git clone git@github.com:kc-ml2/NavOCR.git
 Install PaddleDetection following [offical guide](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.8.1/docs/tutorials/INSTALL.md).
 
 ### Download Testset
+Not required if you use ROS node
 
 ```bash
 # Setup python env
@@ -50,8 +51,15 @@ cd .. && mkdir results
 
 ### Run NavOCR!
 ```bash
-# Remove visualize argument for fast inference
-python run_inference.py   -c configs/ppyoloe/ppyoloe_crn_s_infer_only.yml   --infer_dir data/example_sequence/images --visualize True
+# Remove visualize & save_results argument for fast inference
+python run_inference.py   -c configs/ppyoloe/ppyoloe_crn_s_infer_only.yml   \
+--infer_dir data/example_sequence/images  --visualize True  --save_results True
+```
+
+### Run NavOCR ROS node!
+```bash
+# Script includes visualization image save
+python run_ros_node.py   -c configs/ppyoloe/ppyoloe_crn_s_infer_only.yml
 ```
 
 ## Training Model
@@ -63,7 +71,7 @@ We're working on expanding support beyond store signboards detection model.
 Stay tuned for upcoming features for broader navigation use cases.
 
 - [x] Library migration due to a license issue (`ultralytics` -> `PaddleDetection`)
-- [ ] Alternative inference for higher FPS (`PaddleDetection` is slow for video inference. (About 30 FPS with GPU))
+- [ ] Alternative inference for higher FPS (`PaddleDetection` is slow for video inference. (Currently 30 FPS with GPU))
 - [ ] Model training scripts
 - [ ] Integration with text recognition (Only detection is available now.)
 - [ ] Room number and floor sign detection
