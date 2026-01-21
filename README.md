@@ -24,7 +24,7 @@ Improvements and updates will be released soon.
 
 ## How to Use
 
-### Model Download
+### Download Model
 Our model is included in this repo. So, clone this repo to download the model!  
 The current model supports detection of store signboards only.
 Detection of other navigation-relevant text types will be supported in future updates.
@@ -33,10 +33,15 @@ Detection of other navigation-relevant text types will be supported in future up
 git clone git@github.com:kc-ml2/NavOCR.git
 ```
 
-### Setup
+### Prerequisite
+
+Install PaddleDetection following [offical guide](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.8.1/docs/tutorials/INSTALL.md).
+
+### Download Testset
+
 ```bash
 # Setup python env
-pip install -r requirements.txt
+pip install gdown==5.2.0
 
 # Download sample testset
 mkdir data && cd data
@@ -47,8 +52,8 @@ cd .. && mkdir results
 
 ### Run NavOCR!
 ```bash
-# Fix the directory of RUN_DIR in env.sh first
-./run_nav_ocr.sh
+# Remove visualize argument for fast inference
+python run_inference.py   -c configs/ppyoloe/ppyoloe_crn_s_infer_only.yml   --infer_dir data/example_sequence/images --visualize True
 ```
 
 ## Training Model
@@ -59,10 +64,17 @@ Coming soon! (Dataset crawling, dataset preprocessing, model fine-tuning, ...)
 We're working on expanding support beyond store signboards detection model.
 Stay tuned for upcoming features for broader navigation use cases.
 
-- Library migration due to a license issue (`ultralytics` -> `PaddleDetection`)
-- Model training scripts
-- Integration with text recognition (Only detection is available now.)
-- Room number and floor sign detection
-- Directional guide text detection
-- Integration with other SLAM packages via ROS
+- [x] Library migration due to a license issue (`ultralytics` -> `PaddleDetection`)
+- [ ] Alternative inference for higher FPS (`PaddleDetection` is slow for video inference. (About 30 FPS with GPU))
+- [ ] Model training scripts
+- [ ] Integration with text recognition (Only detection is available now.)
+- [ ] Room number and floor sign detection
+- [ ] Directional guide text detection
+- [ ] Integration with other SLAM packages via ROS
 
+## License
+This repository is licensed under the Apache License, Version 2.0.
+
+This project includes code and configuration files derived from
+PaddleDetection (https://github.com/PaddlePaddle/PaddleDetection),
+which is also licensed under the Apache License, Version 2.0.
