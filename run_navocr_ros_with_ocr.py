@@ -49,7 +49,7 @@ class NavOCRWithOCRNode(Node):
         # Parameters
         self.declare_parameter('config_path', os.path.join(navocr_path, 'configs/ppyoloe/ppyoloe_crn_s_infer_only.yml'))
         self.declare_parameter('weights_path', os.path.join(navocr_path, 'model/navocr.pdparams'))
-        self.declare_parameter('confidence_threshold', 0.3)
+        self.declare_parameter('confidence_threshold', 0.5)
         self.declare_parameter('output_dir', os.path.join(navocr_path, 'results/ros_result_ocr'))
         self.declare_parameter('ocr_language', 'en')
         self.declare_parameter('image_publish_rate', 2.0)
