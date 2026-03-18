@@ -1,8 +1,19 @@
 #!/usr/bin/env python3
-"""
-NavOCR with OCR Text Recognition (PaddleDetection + PaddleOCR)
-Migrated from ultralytics YOLO to PaddleDetection (PPYOLOe)
-"""
+
+# Copyright (c) 2026 Chaehyeuk Lee (KC ML2). All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 
 import rclpy
 from rclpy.node import Node
@@ -11,10 +22,8 @@ from vision_msgs.msg import Detection2DArray, Detection2D, ObjectHypothesisWithP
 from cv_bridge import CvBridge
 
 import cv2
-import numpy as np
 import os
 import sys
-from PIL import Image as PILImage, ImageDraw, ImageFont
 import time
 
 # Add NavOCR to path for PaddleDetector import
@@ -52,7 +61,8 @@ class NavOCRWithOCRNode(Node):
         self.declare_parameter('confidence_threshold', 0.5)
         self.declare_parameter('output_dir', os.path.join(navocr_path, 'results/ros_result_ocr'))
         self.declare_parameter('ocr_language', 'en')
-        self.declare_parameter('image_publish_rate', 2.0)
+        self.declare_parameter('save_image', False)
+        self.declare_parameter('benchmark', False)
         self.declare_parameter('session_name', '')
 
         # Get parameters
@@ -61,7 +71,8 @@ class NavOCRWithOCRNode(Node):
         self.conf_threshold = self.get_parameter('confidence_threshold').value
         self.output_dir = self.get_parameter('output_dir').value
         ocr_lang = self.get_parameter('ocr_language').value
-        self.image_publish_rate = self.get_parameter('image_publish_rate').value
+        self.save_image = self.get_parameter('save_image').value
+        self.benchmark = self.get_parameter('benchmark').value
         self.session_name = self.get_parameter('session_name').value
 
         # Generate session name from timestamp if not provided
@@ -71,12 +82,9 @@ class NavOCRWithOCRNode(Node):
 
         self.get_logger().info(f'Session name: {self.session_name}')
 
-        # Rate limiting for image publishing
-        self.last_image_publish_time = self.get_clock().now()
-        self.image_publish_interval = 1.0 / self.image_publish_rate
-
         # Create output directory
-        os.makedirs(self.output_dir, exist_ok=True)
+        if self.save_image or self.benchmark:
+            os.makedirs(self.output_dir, exist_ok=True)
 
         # CV Bridge
         self.bridge = CvBridge()
@@ -111,7 +119,6 @@ class NavOCRWithOCRNode(Node):
         self.get_logger().info(f'Initializing PaddleOCR (language: {ocr_lang})...')
         try:
             self.ocr = PaddleOCR(
-                use_gpu=True,
                 lang=ocr_lang,
                 use_textline_orientation=True,
                 text_det_thresh=0.25,
@@ -149,7 +156,8 @@ class NavOCRWithOCRNode(Node):
             10
         )
 
-        self.frame_id = 0
+        if self.save_image:
+            self.frame_id = 0
 
         # Performance metrics
         self.total_processing_time = 0.0
@@ -227,49 +235,10 @@ class NavOCRWithOCRNode(Node):
             self.get_logger().error(f'OCR ERROR: {e}')
             return "ocr_error"
 
-    def draw_detection(self, image, x1, y1, x2, y2, label, conf):
+    def draw_detection(self, image, x1, y1, x2, y2, label):
         """Draw bounding box and label on image with Korean text support"""
         cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        label_text = label
-
-        has_korean = any('\uac00' <= char <= '\ud7a3' for char in label)
-
-        if has_korean:
-            try:
-                pil_image = PILImage.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-                draw = ImageDraw.Draw(pil_image)
-
-                try:
-                    font_paths = [
-                        '/usr/share/fonts/truetype/nanum/NanumGothic.ttf',
-                        '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
-                        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'
-                    ]
-                    font = None
-                    for font_path in font_paths:
-                        if os.path.exists(font_path):
-                            font = ImageFont.truetype(font_path, 20)
-                            break
-                    if font is None:
-                        font = ImageFont.load_default()
-                except:
-                    font = ImageFont.load_default()
-
-                bbox = draw.textbbox((0, 0), label_text, font=font)
-                text_w = bbox[2] - bbox[0]
-                text_h = bbox[3] - bbox[1]
-
-                draw.rectangle(
-                    [(x1, y1 - text_h - 10), (x1 + text_w + 10, y1)],
-                    fill=(0, 255, 0)
-                )
-                draw.text((x1 + 5, y1 - text_h - 5), label_text, fill=(0, 0, 0), font=font)
-
-                image[:] = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
-            except Exception as e:
-                self._draw_opencv_text(image, x1, y1, label_text)
-        else:
-            self._draw_opencv_text(image, x1, y1, label_text)
+        self._draw_opencv_text(image, x1, y1, label)
 
     def _draw_opencv_text(self, image, x1, y1, label_text):
         """Helper function to draw text with OpenCV"""
@@ -409,22 +378,23 @@ class NavOCRWithOCRNode(Node):
         self.total_ocr_time += frame_ocr_time
         self.wall_clock_end = time.time()
 
-        # Save image periodically
-        self.frame_id += 1
-        if self.frame_id % 10 == 0:
-            filename = os.path.join(self.output_dir, f"frame_{self.frame_id:06d}.png")
-            cv2.imwrite(filename, annotated_image)
+        # Save image periodically if save_image mode is on
+        if self.save_image:
+            self.frame_id += 1
+            if self.frame_id % 10 == 0:
+                filename = os.path.join(self.output_dir, f"frame_{self.frame_id:06d}.png")
+                cv2.imwrite(filename, annotated_image)
 
-            avg_time = self.total_processing_time / self.frame_count
-            self.get_logger().info(
-                f"Frame {self.frame_id}: {detection_count} detections | "
-                f"Det: {detection_time:.3f}s | OCR: {frame_ocr_time:.3f}s | "
-                f"Total: {total_time:.3f}s | Avg: {avg_time:.3f}s"
-            )
+                avg_time = self.total_processing_time / self.frame_count
+                self.get_logger().info(
+                    f"Frame {self.frame_id}: {detection_count} detections | "
+                    f"Det: {detection_time:.3f}s | OCR: {frame_ocr_time:.3f}s | "
+                    f"Total: {total_time:.3f}s | Avg: {avg_time:.3f}s"
+                )
 
     def destroy_node(self):
         """Print final statistics on shutdown"""
-        if self.frame_count > 0:
+        if self.frame_count > 0 and self.benchmark:
             avg_time = self.total_processing_time / self.frame_count
             avg_detection = self.total_detection_time / self.frame_count
             avg_ocr = self.total_ocr_time / self.frame_count
