@@ -77,7 +77,7 @@ class PaddleOCRBaselineNode(Node):
         try:
             # RTX 4090 optimized settings - same as NavOCR for fair comparison with GPU enabled
             self.ocr = PaddleOCR(
-                use_gpu=True,  # Enable GPU for PaddleOCR
+                # use_gpu=True,  # Enable GPU for PaddleOCR
                 gpu_mem_fraction=1.0,  # Use 80% of GPU memory
                 lang=ocr_lang,
                 use_textline_orientation=True,

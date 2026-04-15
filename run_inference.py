@@ -23,7 +23,7 @@ import ast
 from ppdet.utils.cli import ArgsParser
 from ppdet.utils.logger import setup_logger
 
-from navocr.detector import PaddleDetector
+from navocr.detector_paddle import PaddleDetector
 
 
 def parse_args():
