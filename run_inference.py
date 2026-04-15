@@ -23,7 +23,7 @@ import ast
 from ppdet.utils.cli import ArgsParser
 from ppdet.utils.logger import setup_logger
 
-from src.navocr import PaddleDetector
+from navocr.detector import PaddleDetector
 
 
 def parse_args():
@@ -78,12 +78,6 @@ def main():
         if 'bbox' in results[0]:
             bboxes = results[0]['bbox']
             logger.info(f"Image: {os.path.basename(img_path)} | Detected: {len(bboxes)} boxes | Time: {duration:.4f}s | FPS: {fps:.2f}")
-            
-            # # (Optional) Print bbox data
-            # for box in bboxes:
-            #     cls_id, score, x1, y1, x2, y2 = box
-            #     if score > FLAGS.draw_threshold:
-            #         print(f" >> Class ID: {int(cls_id)}, Score: {score:.4f}")
         else:
             logger.info(f"Image: {os.path.basename(img_path)} | No boxes | Time: {duration:.4f}s | FPS: {fps:.2f}")
 

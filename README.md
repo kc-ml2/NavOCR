@@ -35,6 +35,11 @@ git clone git@github.com:kc-ml2/NavOCR.git
 
 Install PaddleDetection following [offical guide](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.8.1/docs/tutorials/INSTALL.md).
 
+Install PaddleOCR:
+```bash
+pip install paddleocr==2.8.1
+```
+
 ### Download Testset
 Not required if you use ROS node
 
@@ -58,8 +63,16 @@ python run_inference.py   -c configs/ppyoloe/ppyoloe_crn_s_infer_only.yml   \
 
 ### Run NavOCR ROS node!
 ```bash
-# Script includes visualization image save
-python run_ros_node.py   -c configs/ppyoloe/ppyoloe_crn_s_infer_only.yml
+# Build and run as ROS 2 node (detection + OCR)
+cd ~/ros2_ws
+colcon build --packages-select navocr
+source install/setup.bash
+
+# If you encounter oneDNN compatibility issues on CPU, set these before running:
+export FLAGS_enable_pir_api=0
+export FLAGS_enable_pir_in_executor=0
+
+ros2 run navocr navocr_with_ocr_node
 ```
 
 ## Training Model
@@ -73,10 +86,10 @@ Stay tuned for upcoming features for broader navigation use cases.
 - [x] Library migration due to a license issue (`ultralytics` -> `PaddleDetection`)
 - [ ] Alternative inference for higher FPS (`PaddleDetection` is slow for video inference. (Currently 30 FPS with GPU))
 - [ ] Model training scripts
-- [ ] Integration with text recognition (Only detection is available now.)
+- [x] Integration with text recognition (PaddleOCR)
 - [ ] Room number and floor sign detection
 - [ ] Directional guide text detection
-- [ ] Integration with other SLAM packages via ROS
+- [x] Integration with SLAM packages via ROS (TextMap)
 
 ## License
 This repository is licensed under the Apache License, Version 2.0.

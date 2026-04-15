@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+import os
+
 import paddle
 from ppdet.core.workspace import load_config
 from ppdet.engine import Trainer
@@ -22,9 +24,17 @@ from ppdet.utils.cli import merge_args
 
 class PaddleDetector:
     def __init__(self, flags):
-        """Initialize and load weights"""
         self.cfg = load_config(flags.config)
         merge_args(self.cfg, flags)
+
+        # Resolve relative dataset_dir paths to absolute using config file location
+        config_dir = os.path.dirname(os.path.abspath(flags.config))
+        navocr_root = os.path.dirname(os.path.dirname(config_dir))
+        for key in ['TestDataset', 'EvalDataset', 'TrainDataset']:
+            if key in self.cfg and 'dataset_dir' in self.cfg[key]:
+                ds_dir = self.cfg[key]['dataset_dir']
+                if not os.path.isabs(ds_dir):
+                    self.cfg[key]['dataset_dir'] = os.path.join(navocr_root, ds_dir)
         
         self._set_device()
         
@@ -39,9 +49,6 @@ class PaddleDetector:
         self.draw_threshold = flags.draw_threshold
         self.output_dir = flags.output_dir
         
-        # Metadata fro visualization
-        self.clsid2catid = getattr(self.trainer.dataset, 'clsid2catid', None)
-        self.catid2name = getattr(self.trainer.dataset, 'catid2name', None)
 
     def _set_device(self):
         device_list = ['gpu', 'npu', 'xpu', 'mlu', 'gcu']
@@ -53,10 +60,6 @@ class PaddleDetector:
         paddle.set_device(target_device)
 
     def infer(self, image_list, visualize=False, save_results=False):
-        """
-        Given image list, return inference result.
-        """
-
         results = self.trainer.predict(
             image_list,
             draw_threshold=self.draw_threshold,
