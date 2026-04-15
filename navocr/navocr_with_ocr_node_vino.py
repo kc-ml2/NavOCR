@@ -18,7 +18,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from vision_msgs.msg import Detection2D, Detection2DArray, ObjectHypothesisWithPose
 
-from navocr.detector import OpenVINODetector
+from navocr.detector_vino import OpenVINODetector
 
 
 REC_H = 48
