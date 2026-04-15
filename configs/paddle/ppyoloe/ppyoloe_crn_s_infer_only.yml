@@ -17,5 +17,5 @@ width_mult: 0.50
 num_classes: 1
 
 TestDataset:
-  dataset_dir: dataset/metadata
+  dataset_dir: configs/paddle/datasets/metadata
   anno_path: annotations/instances_test.json

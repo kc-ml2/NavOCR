@@ -17,26 +17,26 @@ from typing import List
 
 import cv2
 import numpy as np
+import openvino as ov
+
+from navocr.detector_base import BaseDetector, OpenVINODetectorConfig
 
 
-class OpenVINODetector:
-    def __init__(self, flags):
-        try:
-            import openvino as ov
-        except ImportError as exc:
-            raise ImportError("OpenVINO not installed. Run: pip install openvino") from exc
+class OpenVINODetector(BaseDetector):
+    def __init__(self, config: OpenVINODetectorConfig):
+        super().__init__(config)
 
         self.ov = ov
-        self.xml_path = getattr(flags, 'det_model_path', None) or getattr(flags, 'weights', None)
+        self.xml_path = self.config.model_path
         if not self.xml_path:
             raise ValueError('Detector model path is required')
         if not os.path.isfile(self.xml_path):
             raise FileNotFoundError(f'OpenVINO detector model not found: {self.xml_path}')
+        if self.config.imgsz is None:
+            raise ValueError('OpenVINO detector imgsz is required')
 
-        self.draw_threshold = float(getattr(flags, 'draw_threshold', 0.5))
-        self.output_dir = getattr(flags, 'output_dir', '')
-        self.device = getattr(flags, 'device', 'CPU')
-        self.imgsz = int(getattr(flags, 'imgsz', 640))
+        self.device = self.config.device or 'CPU'
+        self.imgsz = self.config.imgsz
 
         core = ov.Core()
         config = {'PERFORMANCE_HINT': 'LATENCY'}
@@ -129,7 +129,7 @@ class OpenVINODetector:
             scores = outputs[self.scores_output][0]
             boxes = self._map_boxes_to_original(boxes, ratio, pad_w, pad_h, orig_w, orig_h)
 
-            keep = scores > self.draw_threshold
+            keep = scores > self.detection_threshold
             packed = []
             for lbl, score, box in zip(labels[keep], scores[keep], boxes[keep]):
                 x1, y1, x2, y2 = box.astype(np.float32).tolist()

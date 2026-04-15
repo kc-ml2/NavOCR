@@ -1,0 +1,23 @@
+/**:
+  ros__parameters:
+    params_file: configs/navocr_paddle.params.yaml
+
+    detector_backend: paddle
+    detector_model_path: model/navocr.pdparams
+    detector_threshold: 0.5
+    detector_device: "cpu"  # or "gpu"
+    detector_config_path: configs/paddle/ppyoloe/ppyoloe_crn_s_infer_only.yml
+
+    ocr_backend: paddle
+    ocr_threshold: 0.6
+    ocr_device: "cpu"  # or "gpu"
+    ocr_max_resize: 800
+
+    output_dir: results/ros_result_ocr
+    ocr_language: en
+    save_image: false
+    benchmark: false
+    image_save_interval: 10
+    image_topic: /camera/infra1/image_rect_raw
+    detections_topic: /navocr/detections
+    annotated_image_topic: /navocr/annotated_image
