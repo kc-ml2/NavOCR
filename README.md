@@ -1,18 +1,20 @@
 # NavOCR
 
-NavOCR is a lightweight navigation-oriented OCR framework for text detection and text recognition.
+A lightweight, navigation-oriented OCR framework.
 
-It is designed for robotic navigation scenarios where only navigation-relevant text should be detected, such as:
+It is designed for robotic navigation scenarios, where only navigation-relevant text should be detected, such as:
 
 - Signboards
 - Room numbers
 
-Key points:
+while irrelevant text, such as advertisements or price tags, is ignored.
 
-- Focuses on important text to avoid excessive information and improve OCR speed
-- Both stand-alone and ROS 2 support
-- Optimized for CPU-first robotic platforms (8 FPS on Intel CPU with OpenVINO)
-- Paddle/PaddleDetection support for GPU environments
+## Key features
+
+- Focuses on navigation-relevant text to reduce unnecessary information and improve OCR speed
+- Supports both standalone use and ROS 2 integration
+- Optimized for CPU-first robotic platforms, achieving 8 FPS on Intel CPUs with OpenVINO
+- Supports Paddle and PaddleDetection for GPU environments
 
 
 <p align="center">
@@ -26,15 +28,22 @@ Key points:
 
 ## Overview
 
-- `navocr_standalone.py`: run detection + OCR on a single image or a directory
+- `navocr_standalone.py`: Run detection + OCR on a single image or a directory
 - `navocr/ros_node.py`: ROS 2 node entry point
 - `configs/navocr_openvino.params.yaml`: OpenVINO detector + OpenVINO OCR config
 - `configs/navocr_paddle.params.yaml`: PaddleDetection detector + Paddle OCR config
 
+## Backend Composition
+
+| Backend | Hardware | Text detection | Text recognition |
+| --- | --- | --- | --- |
+| OpenVINO | Intel CPU | OpenVINO model converted from [RT-DETRv4](https://github.com/RT-DETRs/RT-DETRv4).<br>Fine-tuned on our navigation-related text dataset | OpenVINO model converted from [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) text recognizer |
+| PaddlePaddle | CPU or GPU | [PP-YOLOE](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.9/configs/ppyoloe/README.md) from PaddleDetection.<br>Fine-tuned on our navigation-related text dataset | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) text recognizer used directly |
+
 ## Installation
 
 ### Download Model
-Both the OpenVINO models and the Paddle/PaddleDetection models are included in this repository.  
+Both the OpenVINO models and the PaddlePaddle models are included in this repository.  
 
 ```bash
 git clone git@github.com:kc-ml2/NavOCR.git
@@ -42,42 +51,59 @@ git clone git@github.com:kc-ml2/NavOCR.git
 
 ### For OpenVINO Backend
 
-Install OpenVINO:
 ```bash
 pip install openvino pyyaml opencv-python numpy
 ```
 
 
-### (Optional) For Paddle Backend
+### For Paddle Backend (Optional)
 
-Install PaddlePaddle:
+This is only required for paddlepaddle backend.
+
+Install PaddlePaddle following the official installation guide for your OS / Python / CUDA version:
+
+- https://www.paddlepaddle.org.cn/en/install/quick
+
+Then install PaddleDetection and PaddleOCR:
+
 ```bash
-# For CPU
-pip install paddlepaddle -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install pyyaml opencv-python numpy
 
-# For CUDA
-pip install paddlepaddle-gpu -i https://pypi.tuna.tsinghua.edu.cn/simple
-```
-
-Install PaddleDectetion:
-```bash
+# PaddleDetection
 git clone https://github.com/PaddlePaddle/PaddleDetection.git
 
 cd PaddleDetection
 pip install -r requirements.txt
-
 python setup.py install
-```
 
-Install PaddleOCR:
-```bash
+# PaddleOCR
 pip install paddleocr
 ```
 
-[Paddle Offical Guide](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.8.1/docs/tutorials/INSTALL.md)
+
+### ROS 2 Runtime Prerequisites
+
+For the ROS 2 node, make sure your ROS environment includes:
+
+- `rclpy`
+- `sensor_msgs`
+- `vision_msgs`
+- `cv_bridge`
+
+These are required by `navocr/ros_node.py` and are also declared in `package.xml`.
+
+For ROS 2 Humble, you can install the message and bridge packages with:
+
+```bash
+sudo apt install \
+  ros-humble-cv-bridge \
+  ros-humble-sensor-msgs \
+  ros-humble-vision-msgs
+```
+
+## Standalone Inference
 
 ### Download Testset
-Not required if you use the ROS node.
 
 ```bash
 # Setup python env
@@ -90,10 +116,14 @@ unzip example_sequence.zip
 cd .. && mkdir results
 ```
 
-## Standalone Inference
-
 ### Run with OpenVINO backend
 ```bash
+git clone git@github.com:kc-ml2/NavOCR.git
+
+# If you encounter oneDNN compatibility issues on CPU, set these before running:
+export FLAGS_enable_pir_api=0
+export FLAGS_enable_pir_in_executor=0
+
 python navocr_standalone.py \
   --params-file configs/navocr_openvino.params.yaml \
   --infer_dir data/example_sequence/images
@@ -118,6 +148,10 @@ python navocr_standalone.py \
 ```bash
 # Build and run as ROS 2 node (detection + OCR)
 cd ~/ros2_ws  # your ros workspace
+cd src/
+git clone git@github.com:kc-ml2/NavOCR.git
+
+cd ~/ros2_ws
 colcon build --packages-select navocr
 source install/setup.bash
 
@@ -139,9 +173,15 @@ Published topics:
 - `detections_topic` default: `/navocr/detections`
 - `annotated_image_topic` default: `/navocr/annotated_image`
 
-## Training Model
+## Acknowledgements
 
-Coming soon! (Dataset crawling, dataset preprocessing, model fine-tuning, ...)
+We gratefully acknowledge the following open-source projects that made this work possible:
+
+- RT-DETRv4: https://github.com/RT-DETRs/RT-DETRv4
+- PaddleDetection: https://github.com/PaddlePaddle/PaddleDetection
+- PaddleOCR / PP-OCRv5: https://github.com/PaddlePaddle/PaddleOCR
+- OpenVINO: https://github.com/openvinotoolkit/openvino
+
 
 ## 🚧 Planned Updates
 We're working on expanding support beyond store signboards detection model.
@@ -151,8 +191,8 @@ Stay tuned for upcoming features for broader navigation use cases.
 - [x] Alternative inference for higher FPS on CPU (Add `OpenVINO` support)
 - [x] Integration with text recognition (PaddleOCR)
 - [x] Integration with SLAM packages via ROS (TextMap)
-- [ ] Model training scripts
-- [ ] Room number and floor sign detection
+- [ ] Model training scripts (Dataset crawling, model fine-tuning, ...)
+- [ ] Floor sign detection
 - [ ] Directional guide text detection
 
 ## License
