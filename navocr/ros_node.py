@@ -18,6 +18,7 @@ from navocr.backend_factory import create_detector, create_ocr
 from navocr.config_loader import load_detector_config, load_ocr_config
 from navocr.detector_base import DetectorConfig
 from navocr.ocr_base import BaseOCR, OCRConfig
+from navocr.pipeline_utils import clip_bbox, draw_detection
 
 
 @dataclass
@@ -165,34 +166,6 @@ class NavOCRNode(Node):
         self.get_logger().info(f'Publishing detections to: {self.node_config.detections_topic}')
         self.get_logger().info(f'Publishing annotated image to: {self.node_config.annotated_image_topic}')
 
-    def draw_detection(self, image, x1: int, y1: int, x2: int, y2: int, label: str) -> None:
-        cv2.rectangle(image, (x1, y1), (x2, y2), self.drawing.bbox_color, self.drawing.bbox_thickness)
-        self._draw_opencv_text(image, x1, y1, label)
-
-    def _draw_opencv_text(self, image, x1: int, y1: int, label_text: str) -> None:
-        (text_w, text_h), baseline = cv2.getTextSize(
-            label_text,
-            self.drawing.font,
-            self.drawing.font_scale,
-            self.drawing.font_thickness,
-        )
-        cv2.rectangle(
-            image,
-            (x1, y1 - text_h - baseline - 5),
-            (x1 + text_w, y1),
-            self.drawing.bbox_color,
-            -1,
-        )
-        cv2.putText(
-            image,
-            label_text,
-            (x1, y1 - baseline - 5),
-            self.drawing.font,
-            self.drawing.font_scale,
-            self.drawing.text_color,
-            self.drawing.font_thickness,
-        )
-
     def image_callback(self, msg) -> None:
         frame_start_time = time.time()
         if self.wall_clock_start is None:
@@ -220,15 +193,15 @@ class NavOCRNode(Node):
                 if float(score) < self.detector_config.detection_threshold:
                     continue
 
-                x1, y1, x2, y2 = self._clip_bbox(cv_image, x1, y1, x2, y2)
+                x1, y1, x2, y2 = clip_bbox(cv_image, x1, y1, x2, y2)
                 cropped_image = cv_image[y1:y2, x1:x2]
                 ocr_text, frame_ocr_time = self._recognize_text(cropped_image, frame_ocr_time)
 
                 if ocr_text in self.ocr_fail_results:
-                    self.draw_detection(annotated_image, x1, y1, x2, y2, self.drawing.fallback_label)
+                    draw_detection(annotated_image, x1, y1, x2, y2, self.drawing.fallback_label)
                     continue
 
-                self.draw_detection(annotated_image, x1, y1, x2, y2, ocr_text)
+                draw_detection(annotated_image, x1, y1, x2, y2, ocr_text)
                 detection_array.detections.append(
                     self._build_detection(msg.header, x1, y1, x2, y2, ocr_text, score)
                 )
@@ -251,14 +224,6 @@ class NavOCRNode(Node):
             frame_ocr_time,
             total_time,
         )
-
-    def _clip_bbox(self, image, x1, y1, x2, y2) -> tuple[int, int, int, int]:
-        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-        x1 = max(0, x1)
-        y1 = max(0, y1)
-        x2 = min(image.shape[1], x2)
-        y2 = min(image.shape[0], y2)
-        return x1, y1, x2, y2
 
     def _recognize_text(self, cropped_image, frame_ocr_time: float) -> tuple[str, float]:
         if cropped_image.size == 0:

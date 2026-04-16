@@ -56,9 +56,10 @@ cd .. && mkdir results
 
 ### Run NavOCR!
 ```bash
-# Remove visualize & save_results argument for fast inference
-python run_inference.py   -c configs/paddle/ppyoloe/ppyoloe_crn_s_infer_only.yml   \
---infer_dir data/example_sequence/images  --visualize True  --save_results True
+python navocr_standalone.py \
+  --params-file configs/navocr_paddle.params.yaml \
+  --infer_dir data/example_sequence/images \
+  --save_image
 ```
 
 ### Run NavOCR ROS node!
@@ -84,7 +85,7 @@ We're working on expanding support beyond store signboards detection model.
 Stay tuned for upcoming features for broader navigation use cases.
 
 - [x] Library migration due to a license issue (`ultralytics` -> `PaddleDetection`)
-- [x] Alternative inference for higher FPS on CPU (`PaddleDetection` -> `OpenVINO`)
+- [x] Alternative inference for higher FPS on CPU (Add `OpenVINO` support)
 - [x] Integration with text recognition (PaddleOCR)
 - [x] Integration with SLAM packages via ROS (TextMap)
 - [ ] Model training scripts

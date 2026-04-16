@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Iterable, Sequence
 
 
 @dataclass
@@ -29,12 +28,6 @@ class BaseDetector(ABC):
         self.config = config
         self.detection_threshold = self.config.detection_threshold
         self.output_dir = self.config.output_dir
-
-    @staticmethod
-    def normalize_image_list(image_list: Sequence[str] | Iterable[str]) -> list[str]:
-        if isinstance(image_list, list):
-            return image_list
-        return list(image_list)
 
     @abstractmethod
     def infer(self, image_list, visualize: bool = False, save_results: bool = False):

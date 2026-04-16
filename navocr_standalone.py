@@ -3,7 +3,7 @@
 Standalone NavOCR inference using the shared params YAML.
 
 - Supports either a single image or a directory of images.
-- Reuses DetectorConfig.from_yaml / OCRConfig.from_yaml.
+- Reuses load_detector_config / load_ocr_config.
 - Supports both Paddle and OpenVINO backends through backend_factory.
 - Prints per-image det/rec/e2e FPS summary.
 """
@@ -20,6 +20,7 @@ import numpy as np
 
 from navocr import DetectorConfig, OCRConfig, create_detector, create_ocr
 from navocr.config_loader import load_detector_config, load_ocr_config
+from navocr.pipeline_utils import clip_bbox, draw_detection
 
 
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.webp'}
@@ -48,34 +49,12 @@ class NavOCRPipeline:
             raise FileNotFoundError(f'Cannot read image: {image_path}')
         return image
 
-    def draw_detection(self, image: np.ndarray, x1: int, y1: int, x2: int, y2: int, label_text: str):
-        cv2.rectangle(image, (x1, y1), (x2, y2), self.bbox_color, self.bbox_thickness)
-        (tw, th), bl = cv2.getTextSize(label_text, self.font, self.font_scale, self.font_thickness)
-        ty = max(th + bl + 2, y1 - 4)
-        cv2.rectangle(
-            image,
-            (x1, ty - th - bl),
-            (x1 + tw, ty + bl),
-            self.text_bg_color,
-            cv2.FILLED,
-        )
-        cv2.putText(
-            image,
-            label_text,
-            (x1, ty),
-            self.font,
-            self.font_scale,
-            self.text_color,
-            self.font_thickness,
-            cv2.LINE_AA,
-        )
-
     def save_result(self, orig_bgr: np.ndarray, results: list[dict], output_path: str):
         vis = orig_bgr.copy()
         for result in results:
             x1, y1, x2, y2 = result['box']
             text = result['text'] if result['text'] not in OCR_FAIL_RESULTS else 'text'
-            self.draw_detection(vis, x1, y1, x2, y2, text)
+            draw_detection(vis, x1, y1, x2, y2, text)
         cv2.imwrite(str(output_path), vis)
         print(f'[OUT] Saved -> {output_path}')
 
@@ -97,11 +76,7 @@ class NavOCRPipeline:
                 if float(score) < self.conf_threshold:
                     continue
 
-                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-                x1 = max(0, x1)
-                y1 = max(0, y1)
-                x2 = min(cv_image.shape[1], x2)
-                y2 = min(cv_image.shape[0], y2)
+                x1, y1, x2, y2 = clip_bbox(cv_image, x1, y1, x2, y2)
                 if x2 <= x1 or y2 <= y1:
                     continue
 
