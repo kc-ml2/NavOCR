@@ -9,8 +9,12 @@ class DetectorConfig:
     backend: str | None = None
     model_path: str | None = None
     detection_threshold: float = 0.5
-    output_dir: str = ""
     device: str | None = None
+    output_dir: str = ""
+    # Kept on detector config for compatibility because PaddleDetection's
+    # Trainer.predict() still expects an output_dir at inference time, and the
+    # same setting is also consumed as the runtime output directory in ROS and
+    # standalone entry points.
 
 
 @dataclass

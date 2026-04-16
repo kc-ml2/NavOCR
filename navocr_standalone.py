@@ -18,7 +18,7 @@ from pathlib import Path
 import cv2
 
 from navocr import create_detector, create_ocr
-from navocr.config_loader import load_detector_config, load_ocr_config
+from navocr.config_loader import load_detector_config, load_ocr_config, load_ros_parameters
 from navocr.pipeline_utils import clip_bbox, draw_detection, load_image
 
 
@@ -195,17 +195,9 @@ def infer_directory(
 
 def build_parser():
     parser = argparse.ArgumentParser(description='Standalone NavOCR inference with shared params YAML')
-    parser.add_argument(
-        '--params-file',
-        type=str,
-        required=True,
-        help='Path to navocr_openvino.params.yaml or navocr_paddle.params.yaml',
-    )
+    parser.add_argument('--params-file', type=str, required=True, help='Path to configs/**.params.yaml')
     parser.add_argument('--input', '-i', type=str, default=None, help='Path to input image')
     parser.add_argument('--infer_dir', type=str, default=None, help='Directory of input images')
-    parser.add_argument('--output', '-o', type=str, default=None, help='Output file path for single-image mode')
-    parser.add_argument('--output_dir', type=str, default=None, help='Output directory for folder mode')
-    parser.add_argument('--save_image', action='store_true', help='Save annotated images')
     parser.add_argument('--log_interval', type=int, default=1, help='Print progress every N images in folder mode')
     return parser
 
@@ -219,14 +211,16 @@ def main():
     if args.input is not None and args.infer_dir is not None:
         parser.error('Use only one of --input or --infer_dir.')
 
+    params, _ = load_ros_parameters(args.params_file)
     detector_cfg = load_detector_config(args.params_file)
     ocr_cfg = load_ocr_config(args.params_file)
     detector = create_detector(detector_cfg)
     ocr = create_ocr(ocr_cfg)
+    save_image = bool(params.get('save_image', False))
 
-    output_dir = args.output_dir or detector_cfg.output_dir
+    output_dir = detector_cfg.output_dir
     if not output_dir:
-        parser.error('Either --output_dir or output_dir in the params YAML must be provided.')
+        parser.error('output_dir must be provided in the params YAML.')
     os.makedirs(output_dir, exist_ok=True)
 
     print(f'[CFG] Params file : {args.params_file}')
@@ -241,14 +235,14 @@ def main():
     )
 
     if args.input:
-        output_path = args.output or str(Path(output_dir) / Path(args.input).name)
+        output_path = str(Path(output_dir) / Path(args.input).name)
         info = pipeline.infer_image(args.input)
         bgr = info['orig_bgr']
         print(f"[IMG] {Path(args.input).name} | {bgr.shape[1]}x{bgr.shape[0]}")
         print_detection_lines(info)
         print_per_image_summary(info)
 
-        if args.save_image:
+        if save_image:
             pipeline.save_result(info['orig_bgr'], info['results'], output_path)
         return
 
@@ -256,7 +250,7 @@ def main():
         pipeline=pipeline,
         infer_dir=args.infer_dir,
         output_dir=output_dir,
-        save_image=args.save_image,
+        save_image=save_image,
         log_interval=max(1, args.log_interval),
     )
 

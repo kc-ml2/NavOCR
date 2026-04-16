@@ -1,8 +1,5 @@
 /**:
   ros__parameters:
-    # Shared params file path used by ROS launch/defaults and standalone tools.
-    params_file: configs/navocr_openvino.params.yaml
-
     # Detector settings shared by ROS and standalone entry points.
     detector_backend: openvino
     detector_model_path: model/rtv4_hgnetv2_s.xml
