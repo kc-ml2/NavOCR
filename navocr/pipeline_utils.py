@@ -1,6 +1,5 @@
-from __future__ import annotations
-
 import cv2
+import numpy as np
 
 
 def draw_detection(
@@ -56,3 +55,10 @@ def clip_bbox(image, x1, y1, x2, y2) -> tuple[int, int, int, int]:
     x2 = min(image.shape[1], x2)
     y2 = min(image.shape[0], y2)
     return x1, y1, x2, y2
+
+
+def load_image(image_path: str) -> np.ndarray:
+    image = cv2.imdecode(np.fromfile(image_path, dtype=np.uint8), cv2.IMREAD_COLOR)
+    if image is None:
+        raise FileNotFoundError(f'Cannot read image: {image_path}')
+    return image

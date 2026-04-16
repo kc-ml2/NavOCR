@@ -25,8 +25,6 @@ from navocr.detector_base import BaseDetector, OpenVINODetectorConfig
 class OpenVINODetector(BaseDetector):
     def __init__(self, config: OpenVINODetectorConfig):
         super().__init__(config)
-
-        self.ov = ov
         self.xml_path = self.config.model_path
         if not self.xml_path:
             raise ValueError('Detector model path is required')
@@ -109,8 +107,7 @@ class OpenVINODetector(BaseDetector):
         boxes[:, [1, 3]] = boxes[:, [1, 3]].clip(0, orig_h)
         return boxes
 
-    def infer(self, image_list, visualize=False, save_results=False):
-        del save_results
+    def infer(self, image_list):
         results = []
         for image_path in image_list:
             bgr = cv2.imdecode(np.fromfile(image_path, dtype=np.uint8), cv2.IMREAD_COLOR)
@@ -136,22 +133,5 @@ class OpenVINODetector(BaseDetector):
                 packed.append([float(lbl), float(score), x1, y1, x2, y2])
 
             results.append({'bbox': np.asarray(packed, dtype=np.float32)})
-
-            if visualize and self.output_dir:
-                vis = bgr.copy()
-                for _, score, x1, y1, x2, y2 in packed:
-                    cv2.rectangle(vis, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-                    cv2.putText(
-                        vis,
-                        f'text {score:.2f}',
-                        (int(x1), max(0, int(y1) - 5)),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5,
-                        (0, 255, 0),
-                        1,
-                        cv2.LINE_AA,
-                    )
-                os.makedirs(self.output_dir, exist_ok=True)
-                cv2.imwrite(os.path.join(self.output_dir, os.path.basename(image_path)), vis)
 
         return results

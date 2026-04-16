@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import yaml
-
-if TYPE_CHECKING:
-    from navocr.detector_base import DetectorConfig
-    from navocr.ocr_base import OCRConfig
+from navocr.detector_base import DetectorConfig, OpenVINODetectorConfig, PaddleDetectorConfig
+from navocr.ocr_base import OCRConfig, OpenVINOOCRConfig, PaddleOCRConfig
 
 
 def load_ros_parameters(path: str | Path, node_name: str = '/**') -> tuple[dict, Path]:
@@ -49,8 +46,6 @@ def resolve_navocr_path(config_path: Path, value: str | None) -> str | None:
 
 
 def load_detector_config(path: str | Path, node_name: str = '/**') -> 'DetectorConfig':
-    from navocr.detector_base import DetectorConfig, OpenVINODetectorConfig, PaddleDetectorConfig
-
     params, config_path = load_ros_parameters(path, node_name=node_name)
     backend = params.get('detector_backend')
     common_kwargs = dict(
@@ -75,8 +70,6 @@ def load_detector_config(path: str | Path, node_name: str = '/**') -> 'DetectorC
 
 
 def load_ocr_config(path: str | Path, node_name: str = '/**') -> 'OCRConfig':
-    from navocr.ocr_base import OCRConfig, OpenVINOOCRConfig, PaddleOCRConfig
-
     params, config_path = load_ros_parameters(path, node_name=node_name)
     backend = params.get('ocr_backend')
     common_kwargs = dict(

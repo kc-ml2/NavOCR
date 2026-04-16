@@ -30,5 +30,5 @@ class BaseDetector(ABC):
         self.output_dir = self.config.output_dir
 
     @abstractmethod
-    def infer(self, image_list, visualize: bool = False, save_results: bool = False):
+    def infer(self, image_list):
         raise NotImplementedError

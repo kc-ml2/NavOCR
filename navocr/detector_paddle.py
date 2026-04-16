@@ -69,13 +69,13 @@ class PaddleDetector(BaseDetector):
                 break
         paddle.set_device(target_device)
 
-    def infer(self, image_list, visualize=False, save_results=False):
+    def infer(self, image_list):
         results = self.trainer.predict(
             image_list,
             draw_threshold=self.detection_threshold,
             output_dir=self.output_dir,
-            save_results=save_results, # bbox JSON save option
-            visualize=visualize,       # Image save option
+            save_results=False,
+            visualize=False,
             save_threshold=self.detection_threshold
         )
 

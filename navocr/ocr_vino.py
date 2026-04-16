@@ -5,6 +5,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import openvino as ov
 
 from navocr.ocr_base import BaseOCR, OpenVINOOCRConfig
 
@@ -12,7 +13,6 @@ from navocr.ocr_base import BaseOCR, OpenVINOOCRConfig
 class OpenVINOOCRRecognizer(BaseOCR):
     def __init__(self, config: OpenVINOOCRConfig):
         super().__init__(config)
-        import openvino as ov
 
         if not self.config.model_path:
             raise ValueError('OpenVINO OCR model path is required')

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import cv2
+from paddleocr import PaddleOCR
 
 from navocr.ocr_base import BaseOCR, PaddleOCRConfig
 
@@ -8,7 +9,6 @@ from navocr.ocr_base import BaseOCR, PaddleOCRConfig
 class PaddleOCRRecognizer(BaseOCR):
     def __init__(self, config: PaddleOCRConfig):
         super().__init__(config)
-        from paddleocr import PaddleOCR
 
         self.ocr = self._create_ocr(PaddleOCR)
 
@@ -39,7 +39,7 @@ class PaddleOCRRecognizer(BaseOCR):
             image_crop = cv2.equalizeHist(image_crop)
             image_crop = cv2.cvtColor(image_crop, cv2.COLOR_GRAY2BGR)
 
-            results = self.ocr.ocr(image_crop)
+            results = self.ocr.predict(image_crop)
             recognized_text = self._extract_text(results)
             return recognized_text if recognized_text else self.NO_TEXT
         except Exception:

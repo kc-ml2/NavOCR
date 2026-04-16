@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Standalone NavOCR inference using the shared params YAML.
+Standalone NavOCR inference using the shared ros params YAML.
 
 - Supports either a single image or a directory of images.
 - Reuses load_detector_config / load_ocr_config.
@@ -16,11 +16,10 @@ import time
 from pathlib import Path
 
 import cv2
-import numpy as np
 
-from navocr import DetectorConfig, OCRConfig, create_detector, create_ocr
+from navocr import create_detector, create_ocr
 from navocr.config_loader import load_detector_config, load_ocr_config
-from navocr.pipeline_utils import clip_bbox, draw_detection
+from navocr.pipeline_utils import clip_bbox, draw_detection, load_image
 
 
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.webp'}
@@ -34,21 +33,6 @@ class NavOCRPipeline:
         self.conf_threshold = conf_threshold
         self.output_dir = output_dir
 
-        self.bbox_color = (0, 255, 0)
-        self.bbox_thickness = 2
-        self.font = cv2.FONT_HERSHEY_SIMPLEX
-        self.font_scale = 1.0
-        self.font_thickness = 2
-        self.text_color = (0, 255, 0)
-        self.text_bg_color = (0, 0, 0)
-
-    @staticmethod
-    def load_image(image_path: str) -> np.ndarray:
-        image = cv2.imdecode(np.fromfile(image_path, dtype=np.uint8), cv2.IMREAD_COLOR)
-        if image is None:
-            raise FileNotFoundError(f'Cannot read image: {image_path}')
-        return image
-
     def save_result(self, orig_bgr: np.ndarray, results: list[dict], output_path: str):
         vis = orig_bgr.copy()
         for result in results:
@@ -60,10 +44,10 @@ class NavOCRPipeline:
 
     def infer_image(self, image_path: str):
         frame_start = time.perf_counter()
-        cv_image = self.load_image(image_path)
+        cv_image = load_image(image_path)
 
         detection_start = time.perf_counter()
-        det_results = self.detector.infer([image_path], visualize=False, save_results=False)
+        det_results = self.detector.infer([image_path])
         detection_time = time.perf_counter() - detection_start
 
         frame_ocr_time = 0.0
@@ -139,17 +123,6 @@ def print_detection_lines(info: dict):
     for result in info['results']:
         x1, y1, x2, y2 = result['box']
         print(f"  [{x1},{y1},{x2},{y2}] det={result['score']:.2f} -> '{result['text']}'")
-
-
-def infer_single_image(pipeline: NavOCRPipeline, image_path: str, output_path: str | None = None, save_image: bool = False):
-    info = pipeline.infer_image(image_path)
-    bgr = info['orig_bgr']
-    print(f"[IMG] {Path(image_path).name} | {bgr.shape[1]}x{bgr.shape[0]}")
-    print_detection_lines(info)
-    print_per_image_summary(info)
-
-    if save_image and output_path:
-        pipeline.save_result(info['orig_bgr'], info['results'], output_path)
 
 
 def infer_directory(
@@ -236,13 +209,6 @@ def build_parser():
     return parser
 
 
-def default_output_dir(params_file: str, detector_cfg: DetectorConfig, ocr_cfg: OCRConfig) -> str:
-    detector_name = detector_cfg.backend or 'detector'
-    ocr_name = ocr_cfg.backend or 'ocr'
-    config_name = Path(params_file).stem.replace('.params', '')
-    return str(Path('outputs') / f'{config_name}_{detector_name}_{ocr_name}')
-
-
 def main():
     parser = build_parser()
     args = parser.parse_args()
@@ -257,7 +223,9 @@ def main():
     detector = create_detector(detector_cfg)
     ocr = create_ocr(ocr_cfg)
 
-    output_dir = args.output_dir or detector_cfg.output_dir or default_output_dir(args.params_file, detector_cfg, ocr_cfg)
+    output_dir = args.output_dir or detector_cfg.output_dir
+    if not output_dir:
+        parser.error('Either --output_dir or output_dir in the params YAML must be provided.')
     os.makedirs(output_dir, exist_ok=True)
 
     print(f'[CFG] Params file : {args.params_file}')
@@ -274,12 +242,14 @@ def main():
 
     if args.input:
         output_path = args.output or str(Path(output_dir) / Path(args.input).name)
-        infer_single_image(
-            pipeline=pipeline,
-            image_path=args.input,
-            output_path=output_path,
-            save_image=args.save_image,
-        )
+        info = pipeline.infer_image(args.input)
+        bgr = info['orig_bgr']
+        print(f"[IMG] {Path(args.input).name} | {bgr.shape[1]}x{bgr.shape[0]}")
+        print_detection_lines(info)
+        print_per_image_summary(info)
+
+        if args.save_image:
+            pipeline.save_result(info['orig_bgr'], info['results'], output_path)
         return
 
     infer_directory(

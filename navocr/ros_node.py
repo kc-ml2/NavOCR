@@ -16,8 +16,7 @@ from vision_msgs.msg import Detection2D, Detection2DArray, ObjectHypothesisWithP
 
 from navocr.backend_factory import create_detector, create_ocr
 from navocr.config_loader import load_detector_config, load_ocr_config
-from navocr.detector_base import DetectorConfig
-from navocr.ocr_base import BaseOCR, OCRConfig
+from navocr.ocr_base import BaseOCR
 from navocr.pipeline_utils import clip_bbox, draw_detection
 
 
@@ -33,18 +32,6 @@ class ROSNodeConfig:
     queue_size: int
     temp_file_path: str
     image_save_interval: int
-
-
-@dataclass
-class DrawingConfig:
-    bbox_color: tuple[int, int, int] = (0, 255, 0)
-    bbox_thickness: int = 2
-    font: int = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale: float = 0.6
-    font_thickness: int = 2
-    text_color: tuple[int, int, int] = (0, 0, 0)
-    fallback_label: str = 'text'
-
 
 def get_navocr_root() -> str:
     file_based = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -70,8 +57,8 @@ class NavOCRNode(Node):
         self.node_config = self._declare_parameters()
         self.detector_config = self._build_detector_config()
         self.ocr_config = self._build_ocr_config()
-        self.drawing = DrawingConfig()
         self.bridge = CvBridge()
+        self.fallback_label = 'text'
         self.ocr_fail_results = {BaseOCR.NO_TEXT, 'empty_crop', BaseOCR.ERROR}
 
         self.total_processing_time = 0.0
@@ -122,10 +109,10 @@ class NavOCRNode(Node):
             image_save_interval=int(self.get_parameter('image_save_interval').value),
         )
 
-    def _build_detector_config(self) -> DetectorConfig:
+    def _build_detector_config(self):
         return load_detector_config(self.node_config.params_file)
 
-    def _build_ocr_config(self) -> OCRConfig:
+    def _build_ocr_config(self):
         return load_ocr_config(self.node_config.params_file)
 
     def _create_detector(self):
@@ -198,7 +185,7 @@ class NavOCRNode(Node):
                 ocr_text, frame_ocr_time = self._recognize_text(cropped_image, frame_ocr_time)
 
                 if ocr_text in self.ocr_fail_results:
-                    draw_detection(annotated_image, x1, y1, x2, y2, self.drawing.fallback_label)
+                    draw_detection(annotated_image, x1, y1, x2, y2, self.fallback_label)
                     continue
 
                 draw_detection(annotated_image, x1, y1, x2, y2, ocr_text)
