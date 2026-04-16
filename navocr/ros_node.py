@@ -55,8 +55,10 @@ class NavOCRNode(Node):
     def __init__(self):
         super().__init__('navocr_with_ocr_node')
         self.node_config = self._declare_parameters()
-        self.detector_config = self._build_detector_config()
-        self.ocr_config = self._build_ocr_config()
+        # Detector/OCR model settings are loaded from the shared params YAML so
+        # the same configuration can be reused by both ROS and standalone entry points.
+        self.detector_config = load_detector_config(self.node_config.params_file)
+        self.ocr_config = load_ocr_config(self.node_config.params_file)
         self.bridge = CvBridge()
         self.fallback_label = 'text'
         self.ocr_fail_results = {BaseOCR.NO_TEXT, 'empty_crop', BaseOCR.ERROR}
@@ -74,13 +76,15 @@ class NavOCRNode(Node):
         if self.node_config.save_image:
             self.frame_id = 0
 
-        self.detector = self._create_detector()
-        self.ocr = self._create_ocr()
+        self.detector = create_detector(self.detector_config)
+        self.ocr = create_ocr(self.ocr_config)
         self._create_ros_io()
         self._log_startup()
 
     def _declare_parameters(self) -> ROSNodeConfig:
         default_root = get_navocr_root()
+        # These parameters control ROS node runtime behavior.
+        # Detector/OCR model settings are loaded separately from `params_file`.
         self.declare_parameter('params_file', os.path.join(default_root, 'configs/navocr_openvino.params.yaml'))
         self.declare_parameter('save_image', False)
         self.declare_parameter('benchmark', False)
@@ -108,18 +112,6 @@ class NavOCRNode(Node):
             temp_file_path=self.get_parameter('temp_file_path').value,
             image_save_interval=int(self.get_parameter('image_save_interval').value),
         )
-
-    def _build_detector_config(self):
-        return load_detector_config(self.node_config.params_file)
-
-    def _build_ocr_config(self):
-        return load_ocr_config(self.node_config.params_file)
-
-    def _create_detector(self):
-        return create_detector(self.detector_config)
-
-    def _create_ocr(self):
-        return create_ocr(self.ocr_config)
 
     def _create_ros_io(self) -> None:
         self.image_sub = self.create_subscription(

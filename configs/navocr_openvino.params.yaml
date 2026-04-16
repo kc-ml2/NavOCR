@@ -1,13 +1,16 @@
 /**:
   ros__parameters:
+    # Shared params file path used by ROS launch/defaults and standalone tools.
     params_file: configs/navocr_openvino.params.yaml
 
+    # Detector settings shared by ROS and standalone entry points.
     detector_backend: openvino
     detector_model_path: model/rtv4_hgnetv2_s.xml
     detector_threshold: 0.5
     detector_device: "CPU"
     detector_imgsz: 640
 
+    # OCR settings shared by ROS and standalone entry points.
     ocr_backend: openvino
     ocr_model_path: model/PP-OCRv5_mobile_rec_infer.xml
     ocr_dict_path: model/PP-OCRv5_mobile_rec_infer/inference.yml
@@ -17,9 +20,12 @@
     ocr_rec_h: 48
     ocr_rec_img_w: 320
     ocr_rec_max_w: 3200
-
-    output_dir: results/ros_result_ocr
     ocr_language: en
+
+    # Shared output settings used by both ROS and standalone entry points.
+    output_dir: results/ros_result_ocr
+
+    # ROS node runtime settings. These are consumed directly by ros_node.py.
     save_image: false
     benchmark: false
     image_save_interval: 10
