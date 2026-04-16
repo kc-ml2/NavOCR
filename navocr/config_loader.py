@@ -60,6 +60,7 @@ def load_detector_config(path: str | Path, node_name: str = '/**') -> 'DetectorC
         return PaddleDetectorConfig(
             **common_kwargs,
             detector_config_path=resolve_navocr_path(config_path, params.get('detector_config_path')),
+            quiet_logs=bool(params.get('detector_quiet_logs', False)),
         )
     if backend == 'openvino':
         return OpenVINODetectorConfig(

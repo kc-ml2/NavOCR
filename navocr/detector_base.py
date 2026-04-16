@@ -16,6 +16,7 @@ class DetectorConfig:
 @dataclass
 class PaddleDetectorConfig(DetectorConfig):
     detector_config_path: str | None = None
+    quiet_logs: bool = False
 
 
 @dataclass

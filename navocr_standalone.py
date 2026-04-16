@@ -27,11 +27,10 @@ OCR_FAIL_RESULTS = {'no_text_detected', 'empty_crop', 'ocr_error'}
 
 
 class NavOCRPipeline:
-    def __init__(self, detector, ocr, conf_threshold: float, output_dir: str):
+    def __init__(self, detector, ocr, conf_threshold: float):
         self.detector = detector
         self.ocr = ocr
         self.conf_threshold = conf_threshold
-        self.output_dir = output_dir
 
     def save_result(self, orig_bgr: np.ndarray, results: list[dict], output_path: str):
         vis = orig_bgr.copy()
@@ -239,7 +238,6 @@ def main():
         detector=detector,
         ocr=ocr,
         conf_threshold=detector_cfg.detection_threshold,
-        output_dir=output_dir,
     )
 
     if args.input:

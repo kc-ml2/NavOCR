@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import os
+from contextlib import redirect_stderr, redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 import paddle
@@ -70,13 +72,25 @@ class PaddleDetector(BaseDetector):
         paddle.set_device(target_device)
 
     def infer(self, image_list):
-        results = self.trainer.predict(
-            image_list,
-            draw_threshold=self.detection_threshold,
-            output_dir=self.output_dir,
-            save_results=False,
-            visualize=False,
-            save_threshold=self.detection_threshold
-        )
+        if self.config.quiet_logs:
+            sink = StringIO()
+            with redirect_stdout(sink), redirect_stderr(sink):
+                results = self.trainer.predict(
+                    image_list,
+                    draw_threshold=self.detection_threshold,
+                    output_dir=self.output_dir,
+                    save_results=False,
+                    visualize=False,
+                    save_threshold=self.detection_threshold
+                )
+        else:
+            results = self.trainer.predict(
+                image_list,
+                draw_threshold=self.detection_threshold,
+                output_dir=self.output_dir,
+                save_results=False,
+                visualize=False,
+                save_threshold=self.detection_threshold
+            )
 
         return results
