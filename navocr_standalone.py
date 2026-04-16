@@ -47,7 +47,9 @@ class NavOCRPipeline:
         cv_image = load_image(image_path)
 
         detection_start = time.perf_counter()
-        det_results = self.detector.infer([image_path])
+        det_results = self.detector.infer_loaded_images([cv_image])
+        if det_results is None:
+            det_results = self.detector.infer([image_path])
         detection_time = time.perf_counter() - detection_start
 
         frame_ocr_time = 0.0

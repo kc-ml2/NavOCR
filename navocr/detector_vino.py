@@ -113,25 +113,37 @@ class OpenVINODetector(BaseDetector):
             bgr = cv2.imdecode(np.fromfile(image_path, dtype=np.uint8), cv2.IMREAD_COLOR)
             if bgr is None:
                 raise FileNotFoundError(f'Cannot read image: {image_path}')
-
-            orig_h, orig_w = bgr.shape[:2]
-            blob, orig_size, ratio, pad_w, pad_h = self._preprocess(bgr)
-            outputs = self.infer_request.infer({
-                self.images_input.any_name: blob,
-                self.orig_sizes_input.any_name: orig_size,
-            })
-
-            labels = outputs[self.labels_output][0]
-            boxes = outputs[self.boxes_output][0]
-            scores = outputs[self.scores_output][0]
-            boxes = self._map_boxes_to_original(boxes, ratio, pad_w, pad_h, orig_w, orig_h)
-
-            keep = scores > self.detection_threshold
-            packed = []
-            for lbl, score, box in zip(labels[keep], scores[keep], boxes[keep]):
-                x1, y1, x2, y2 = box.astype(np.float32).tolist()
-                packed.append([float(lbl), float(score), x1, y1, x2, y2])
-
-            results.append({'bbox': np.asarray(packed, dtype=np.float32)})
-
+            results.append(self._infer_bgr(bgr))
         return results
+
+    def infer_loaded_images(self, image_list: List[np.ndarray]):
+        return [self._infer_bgr(bgr) for bgr in image_list]
+
+    def _infer_bgr(self, bgr: np.ndarray):
+        if bgr is None:
+            raise ValueError('Input image is None')
+        if not isinstance(bgr, np.ndarray):
+            raise TypeError(f'Expected np.ndarray, got {type(bgr)!r}')
+
+        if bgr.ndim != 3 or bgr.shape[2] != 3:
+            raise ValueError(f'Expected BGR image with shape [H, W, 3], got {bgr.shape}')
+
+        orig_h, orig_w = bgr.shape[:2]
+        blob, orig_size, ratio, pad_w, pad_h = self._preprocess(bgr)
+        outputs = self.infer_request.infer({
+            self.images_input.any_name: blob,
+            self.orig_sizes_input.any_name: orig_size,
+        })
+
+        labels = outputs[self.labels_output][0]
+        boxes = outputs[self.boxes_output][0]
+        scores = outputs[self.scores_output][0]
+        boxes = self._map_boxes_to_original(boxes, ratio, pad_w, pad_h, orig_w, orig_h)
+
+        keep = scores > self.detection_threshold
+        packed = []
+        for lbl, score, box in zip(labels[keep], scores[keep], boxes[keep]):
+            x1, y1, x2, y2 = box.astype(np.float32).tolist()
+            packed.append([float(lbl), float(score), x1, y1, x2, y2])
+
+        return {'bbox': np.asarray(packed, dtype=np.float32)}

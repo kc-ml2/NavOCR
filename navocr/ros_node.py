@@ -81,7 +81,8 @@ class NavOCRNode(Node):
 
     def _declare_parameters(self) -> ROSNodeConfig:
         default_root = get_navocr_root()
-        self.declare_parameter('params_file', os.path.join(default_root, 'configs/navocr_openvino.params.yaml'))
+        # self.declare_parameter('params_file', os.path.join(default_root, 'configs/navocr_openvino.params.yaml'))
+        self.declare_parameter('params_file', os.path.join(default_root, 'configs/navocr_paddle.params.yaml'))
         self.declare_parameter('save_image', False)
         self.declare_parameter('benchmark', False)
         self.declare_parameter('session_name', '')

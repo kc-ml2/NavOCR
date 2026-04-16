@@ -32,3 +32,6 @@ class BaseDetector(ABC):
     @abstractmethod
     def infer(self, image_list):
         raise NotImplementedError
+
+    def infer_loaded_images(self, image_list):
+        return None
