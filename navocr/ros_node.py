@@ -81,8 +81,7 @@ class NavOCRNode(Node):
 
     def _declare_parameters(self) -> ROSNodeConfig:
         default_root = get_navocr_root()
-        # self.declare_parameter('params_file', os.path.join(default_root, 'configs/navocr_openvino.params.yaml'))
-        self.declare_parameter('params_file', os.path.join(default_root, 'configs/navocr_paddle.params.yaml'))
+        self.declare_parameter('params_file', os.path.join(default_root, 'configs/navocr_openvino.params.yaml'))
         self.declare_parameter('save_image', False)
         self.declare_parameter('benchmark', False)
         self.declare_parameter('session_name', '')
@@ -165,9 +164,11 @@ class NavOCRNode(Node):
             self.get_logger().error(f'cv_bridge conversion failed: {exc}')
             return
 
-        cv2.imwrite(self.node_config.temp_file_path, cv_image)
         detection_start = time.time()
-        results = self.detector.infer([self.node_config.temp_file_path])
+        results = self.detector.infer_loaded_images([cv_image])
+        if results is None:
+            cv2.imwrite(self.node_config.temp_file_path, cv_image)
+            results = self.detector.infer([self.node_config.temp_file_path])
         detection_time = time.time() - detection_start
 
         annotated_image = cv_image.copy()
