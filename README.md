@@ -43,41 +43,43 @@ while irrelevant text, such as advertisements or price tags, is ignored.
 ## Installation
 
 ### Download Model
-Both the OpenVINO models and the PaddlePaddle models are included in this repository.  
+Both the OpenVINO models and the PaddlePaddle models are included in this repository.
 
 ```bash
 git clone git@github.com:kc-ml2/NavOCR.git
 ```
 
-### For OpenVINO Backend
+### Python Environment Setup (recommended)
+
+Using a `venv` keeps NavOCR's Python dependencies isolated from the system Python and avoids conflicts with `colcon build`.
 
 ```bash
-pip install openvino pyyaml opencv-python numpy
+python3 -m venv ~/.venvs/navocr
+source ~/.venvs/navocr/bin/activate
+
+pip install --upgrade pip
+pip install colcon-common-extensions
+pip install -r requirements.txt
 ```
 
+When building inside the venv, invoke colcon through Python so it uses the venv interpreter:
+
+```bash
+cd ~/ros2_ws
+python -m colcon build --symlink-install --packages-select navocr
+source install/setup.bash
+```
 
 ### For Paddle Backend (Optional)
 
-This is only required for paddlepaddle backend.
-
-Install PaddlePaddle following the official installation guide for your OS / Python / CUDA version:
-
-- https://www.paddlepaddle.org.cn/en/install/quick
-
-Then install PaddleDetection and PaddleOCR:
+`paddlepaddle==3.0.0` and `paddleocr` are already installed via `requirements.txt`.
+PaddleDetection is distributed as a git repository and must be installed separately:
 
 ```bash
-pip install pyyaml opencv-python numpy
-
-# PaddleDetection
 git clone https://github.com/PaddlePaddle/PaddleDetection.git
-
 cd PaddleDetection
 pip install -r requirements.txt
 python setup.py install
-
-# PaddleOCR
-pip install paddleocr
 ```
 
 

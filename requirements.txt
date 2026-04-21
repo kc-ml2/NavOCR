@@ -1,1 +1,7 @@
+pyyaml
+opencv-python
+numpy
+openvino
+paddlepaddle==3.0.0
+paddleocr
 gdown==5.2.0

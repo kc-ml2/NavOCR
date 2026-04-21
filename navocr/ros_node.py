@@ -9,6 +9,7 @@ from datetime import datetime
 
 import cv2
 import rclpy
+from ament_index_python.packages import get_package_share_directory
 from cv_bridge import CvBridge
 from rclpy.node import Node
 from sensor_msgs.msg import Image
@@ -33,22 +34,8 @@ class ROSNodeConfig:
     temp_file_path: str
     image_save_interval: int
 
-def get_navocr_root() -> str:
-    file_based = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    if os.path.isdir(os.path.join(file_based, 'configs')):
-        return file_based
-
-    cwd = os.getcwd()
-    for _ in range(5):
-        candidate = os.path.join(cwd, 'src', 'NavOCR')
-        if os.path.isdir(os.path.join(candidate, 'configs')) or os.path.isdir(os.path.join(candidate, 'model')):
-            return candidate
-        parent = os.path.dirname(cwd)
-        if parent == cwd:
-            break
-        cwd = parent
-
-    return file_based
+def get_navocr_share_dir() -> str:
+    return get_package_share_directory('navocr')
 
 
 class NavOCRNode(Node):
@@ -82,10 +69,10 @@ class NavOCRNode(Node):
         self._log_startup()
 
     def _declare_parameters(self) -> ROSNodeConfig:
-        default_root = get_navocr_root()
+        default_share = get_navocr_share_dir()
         # These parameters control ROS node runtime behavior.
         # Detector/OCR model settings are loaded separately from `params_file`.
-        self.declare_parameter('params_file', os.path.join(default_root, 'configs/navocr_openvino.params.yaml'))
+        self.declare_parameter('params_file', os.path.join(default_share, 'configs/navocr_openvino.params.yaml'))
         self.declare_parameter('save_image', False)
         self.declare_parameter('benchmark', False)
         self.declare_parameter('session_name', '')
