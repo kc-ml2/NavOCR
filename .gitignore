@@ -2,6 +2,8 @@
 __pycache__*
 .pytest_cache/
 .cache/
-__init__.py
+*.egg-info
 data
 results
+outputs
+resource

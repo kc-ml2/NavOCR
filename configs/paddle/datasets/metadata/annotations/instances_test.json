@@ -1,0 +1,31 @@
+{
+  "images": [
+    {
+      "id": 1,
+      "file_name": "20251215_135837.jpg",
+      "width": 4000,
+      "height": 3000
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1,
+      "bbox": [
+        2711.9999999999995,
+        1092.501,
+        620.0,
+        129.0
+      ],
+      "area": 79980.0,
+      "iscrowd": 0
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "navigation-oriented-text"
+    }
+  ]
+}
