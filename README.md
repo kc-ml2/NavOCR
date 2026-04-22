@@ -35,10 +35,12 @@ while irrelevant text, such as advertisements or price tags, is ignored.
 
 ## Backend Composition
 
-| Backend | Hardware | Text detection | Text recognition |
-| --- | --- | --- | --- |
-| OpenVINO | Intel CPU | OpenVINO model converted from [RT-DETRv4](https://github.com/RT-DETRs/RT-DETRv4).<br>Fine-tuned on our navigation-related text dataset | OpenVINO model converted from [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) text recognizer |
-| PaddlePaddle | CPU or GPU | [PP-YOLOE](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.9/configs/ppyoloe/README.md) from PaddleDetection.<br>Fine-tuned on our navigation-related text dataset | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) text recognizer used directly |
+| Model format | Runtime / engine | Hardware  | Text detection | Text recognition | FPS |
+| ------------ | ---------------- | --------- | -------------- | ---------------- | --- |
+| OpenVINO IR  | OpenVINO Runtime | Intel CPU | [RT-DETRv4](https://github.com/RT-DETRs/RT-DETRv4) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | ... |
+| Paddle model | Paddle Inference | CPU / GPU | [PP-YOLOE](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.9/configs/ppyoloe/README.md) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | ... |
+| ONNX         | ONNX Runtime     | CPU / GPU | ...            | ...              | ... |
+| PyTorch      | PyTorch          | CPU / GPU | ...            | ...              | ... |
 
 ## Installation
 
@@ -59,31 +61,41 @@ source ~/.venvs/navocr/bin/activate
 
 pip install --upgrade pip
 pip install colcon-common-extensions
-pip install -r requirements.txt
 ```
 
-When building inside the venv, invoke colcon through Python so it uses the venv interpreter:
+
+### For OpenVINO Backend
 
 ```bash
-cd ~/ros2_ws
-python -m colcon build --symlink-install --packages-select navocr
-source install/setup.bash
+pip install openvino pyyaml opencv-python numpy
 ```
+
 
 ### For Paddle Backend (Optional)
 
-`paddlepaddle==3.0.0` and `paddleocr` are already installed via `requirements.txt`.
-PaddleDetection is distributed as a git repository and must be installed separately:
+This is only required for paddlepaddle backend.
+
+Install PaddlePaddle following the official installation guide for your OS / Python / CUDA version:
+
+- https://www.paddlepaddle.org.cn/en/install/quick
+
+Then install PaddleDetection and PaddleOCR:
 
 ```bash
+pip install pyyaml opencv-python numpy
+
+# PaddleDetection
 git clone https://github.com/PaddlePaddle/PaddleDetection.git
+
 cd PaddleDetection
 pip install -r requirements.txt
 python setup.py install
+
+# PaddleOCR
+pip install paddleocr
 ```
 
-
-### ROS 2 Runtime Prerequisites
+### Build ROS 2 package (Optional)
 
 For the ROS 2 node, make sure your ROS environment includes:
 
@@ -97,10 +109,16 @@ These are required by `navocr/ros_node.py` and are also declared in `package.xml
 For ROS 2 Humble, you can install the message and bridge packages with:
 
 ```bash
-sudo apt install \
-  ros-humble-cv-bridge \
-  ros-humble-sensor-msgs \
-  ros-humble-vision-msgs
+sudo apt install ros-humble-cv-bridge ros-humble-sensor-msgs ros-humble-vision-msgs
+```
+
+When building inside the venv, invoke colcon through Python so it uses the venv interpreter:
+
+```bash
+cd ~/ros2_ws
+colcon build --symlink-install --packages-select navocr
+python -m colcon build --symlink-install --packages-select navocr  # if you're using venv
+source install/setup.bash
 ```
 
 ## Standalone Inference
@@ -148,14 +166,7 @@ python navocr_standalone.py \
 
 ## ROS 2 Node
 ```bash
-# Build and run as ROS 2 node (detection + OCR)
-cd ~/ros2_ws  # your ros workspace
-cd src/
-git clone git@github.com:kc-ml2/NavOCR.git
-
-cd ~/ros2_ws
-colcon build --packages-select navocr
-source install/setup.bash
+# Build ROS 2 package according to "Build ROS 2 package (Optional)" above.
 
 # If you encounter oneDNN compatibility issues on CPU, set these before running:
 export FLAGS_enable_pir_api=0
