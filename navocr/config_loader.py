@@ -3,8 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
-from navocr.detector_base import DetectorConfig, OpenVINODetectorConfig, PaddleDetectorConfig
-from navocr.ocr_base import OCRConfig, OpenVINOOCRConfig, PaddleOCRConfig
+from navocr.detector_base import (
+    DetectorConfig,
+    ONNXDetectorConfig,
+    OpenVINODetectorConfig,
+    PaddleDetectorConfig,
+    PyTorchDetectorConfig,
+)
+from navocr.ocr_base import OCRConfig, ONNXOCRConfig, OpenVINOOCRConfig, PaddleOCRConfig
 
 
 def load_ros_parameters(path: str | Path, node_name: str = '/**') -> tuple[dict, Path]:
@@ -67,6 +73,18 @@ def load_detector_config(path: str | Path, node_name: str = '/**') -> 'DetectorC
             **common_kwargs,
             imgsz=(int(params['detector_imgsz']) if 'detector_imgsz' in params else None),
         )
+    if backend == 'pytorch':
+        return PyTorchDetectorConfig(
+            **common_kwargs,
+            pytorch_config_path=resolve_navocr_path(config_path, params.get('detector_pytorch_config_path')),
+            engine_root=resolve_navocr_path(config_path, params.get('detector_engine_root')),
+            imgsz=(int(params['detector_imgsz']) if 'detector_imgsz' in params else None),
+        )
+    if backend == 'onnx':
+        return ONNXDetectorConfig(
+            **common_kwargs,
+            imgsz=(int(params['detector_imgsz']) if 'detector_imgsz' in params else None),
+        )
     return DetectorConfig(**common_kwargs)
 
 
@@ -86,6 +104,14 @@ def load_ocr_config(path: str | Path, node_name: str = '/**') -> 'OCRConfig':
         return PaddleOCRConfig(**common_kwargs)
     if backend == 'openvino':
         return OpenVINOOCRConfig(
+            **common_kwargs,
+            dict_path=resolve_navocr_path(config_path, params.get('ocr_dict_path')),
+            rec_h=(int(params['ocr_rec_h']) if 'ocr_rec_h' in params else None),
+            rec_img_w=(int(params['ocr_rec_img_w']) if 'ocr_rec_img_w' in params else None),
+            rec_max_w=(int(params['ocr_rec_max_w']) if 'ocr_rec_max_w' in params else None),
+        )
+    if backend == 'onnx':
+        return ONNXOCRConfig(
             **common_kwargs,
             dict_path=resolve_navocr_path(config_path, params.get('ocr_dict_path')),
             rec_h=(int(params['ocr_rec_h']) if 'ocr_rec_h' in params else None),

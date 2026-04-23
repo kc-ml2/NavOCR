@@ -9,11 +9,14 @@ from navocr.ocr_base import OCRConfig
 DETECTOR_BACKENDS = {
     'paddle': 'navocr.detector_paddle:PaddleDetector',
     'openvino': 'navocr.detector_vino:OpenVINODetector',
+    'pytorch': 'navocr.detector_pytorch:PyTorchDetector',
+    'onnx': 'navocr.detector_onnx:ONNXDetector',
 }
 
 OCR_BACKENDS = {
     'paddle': 'navocr.ocr_paddle:PaddleOCRRecognizer',
     'openvino': 'navocr.ocr_vino:OpenVINOOCRRecognizer',
+    'onnx': 'navocr.ocr_onnx:ONNXOCRRecognizer',
 }
 
 
