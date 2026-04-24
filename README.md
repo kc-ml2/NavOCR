@@ -75,6 +75,8 @@ pip install openvino pyyaml opencv-python numpy
 
 This is only required for paddlepaddle backend.
 
+> Tested with `paddlepaddle==3.0.0` and `paddleocr==3.4.0`.
+
 Install PaddlePaddle following the official installation guide for your OS / Python / CUDA version:
 
 - https://www.paddlepaddle.org.cn/en/install/quick
