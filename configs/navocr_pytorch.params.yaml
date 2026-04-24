@@ -2,8 +2,8 @@
   ros__parameters:
     # Detector settings shared by ROS and standalone entry points.
     detector_backend: pytorch
-    detector_model_path: model/rtv4_hgnetv2_s.pth
-    detector_pytorch_config_path: model/rtv4_hgnetv2_s/rtv4/rtv4_hgnetv2_s_coco.yml
+    detector_model_path: model/pytorch/rtv4_hgnetv2_s.pth
+    detector_pytorch_config_path: model/pytorch/rtv4_hgnetv2_s/rtv4/rtv4_hgnetv2_s_coco.yml
     detector_threshold: 0.4
     detector_device: "cuda"  # or "cpu"
     detector_imgsz: 640

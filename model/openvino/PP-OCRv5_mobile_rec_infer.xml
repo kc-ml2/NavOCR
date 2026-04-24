@@ -14190,7 +14190,7 @@
 	<rt_info>
 		<Runtime_version value="2026.0.0-20965-c6d6a13a886-releases/2026/0" />
 		<conversion_parameters>
-			<input_model value="DIR/PP-OCRv5_mobile_rec_infer.onnx" />
+			<input_model value="DIR/../onnx/PP-OCRv5_mobile_rec_infer.onnx" />
 			<is_python_object value="False" />
 		</conversion_parameters>
 	</rt_info>
