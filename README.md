@@ -212,5 +212,6 @@ Stay tuned for upcoming features for broader navigation use cases.
 This repository is licensed under the Apache License, Version 2.0.
 
 This project includes code and configuration files derived from
-PaddleDetection (https://github.com/PaddlePaddle/PaddleDetection),
-which is also licensed under the Apache License, Version 2.0.
+PaddleDetection (https://github.com/PaddlePaddle/PaddleDetection) and
+RT-DETRv4 (https://github.com/RT-DETRs/RT-DETRv4),
+which are also licensed under the Apache License, Version 2.0.
