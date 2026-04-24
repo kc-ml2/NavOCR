@@ -78,7 +78,6 @@ class NavOCRPipeline:
                     'text': ocr_text,
                     'class_id': int(cls_id),
                 })
-
         total_time = time.perf_counter() - frame_start
         det_fps = (1.0 / detection_time) if detection_time > 0 else 0.0
         rec_fps = (1.0 / frame_ocr_time) if frame_ocr_time > 0 else None
@@ -210,7 +209,6 @@ def main():
         parser.error('Either --input or --infer_dir must be provided.')
     if args.input is not None and args.infer_dir is not None:
         parser.error('Use only one of --input or --infer_dir.')
-
     params, _ = load_ros_parameters(args.params_file)
     detector_cfg = load_detector_config(args.params_file)
     ocr_cfg = load_ocr_config(args.params_file)

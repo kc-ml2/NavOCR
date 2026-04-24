@@ -26,17 +26,16 @@ class PyTorchDetector(BaseDetector):
 
         self.imgsz = int(self.config.imgsz)
         self.device = self._resolve_device(self.config.device)
-
         engine_root = self._resolve_engine_root(self.config.engine_root)
         if engine_root and engine_root not in sys.path:
             sys.path.insert(0, engine_root)
 
         try:
-            from engine.core import YAMLConfig
+            from engine.pytorch.core import YAMLConfig
         except ImportError as exc:
             raise ImportError(
-                'Failed to import engine.core. Set detector_engine_root in the YAML '
-                'params to the directory that contains the "engine/" package.'
+                'Failed to import engine.pytorch.core. Set detector_engine_root in the YAML '
+                'params to the directory that contains the "engine/pytorch" package.'
             ) from exc
 
         import torch
@@ -75,16 +74,16 @@ class PyTorchDetector(BaseDetector):
     def _resolve_engine_root(configured: str | None) -> str | None:
         if configured:
             root = os.path.abspath(configured)
-            if not os.path.isdir(os.path.join(root, 'engine')):
+            if not os.path.isdir(os.path.join(root, 'engine', 'pytorch')):
                 raise FileNotFoundError(
-                    f'detector_engine_root does not contain an "engine/" package: {root}'
+                    f'detector_engine_root does not contain an "engine/pytorch" package: {root}'
                 )
             return root
 
         # Default: NavOCR repo root (parent of the navocr package directory),
-        # which holds the vendored engine/ tree.
+        # which holds the vendored engine/pytorch tree.
         navocr_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
-        if os.path.isdir(os.path.join(navocr_root, 'engine')):
+        if os.path.isdir(os.path.join(navocr_root, 'engine', 'pytorch')):
             return navocr_root
         return None
 
