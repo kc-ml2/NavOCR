@@ -72,7 +72,7 @@ class NavOCRNode(Node):
         default_share = get_navocr_share_dir()
         # These parameters control ROS node runtime behavior.
         # Detector/OCR model settings are loaded separately from `params_file`.
-        self.declare_parameter('params_file', os.path.join(default_share, 'configs/navocr_openvino.params.yaml'))
+        self.declare_parameter('params_file', os.path.join(default_share, 'configs/navocr_onnx.params.yaml'))
         self.declare_parameter('save_image', False)
         self.declare_parameter('benchmark', False)
         self.declare_parameter('session_name', '')

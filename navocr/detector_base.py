@@ -28,6 +28,11 @@ class OpenVINODetectorConfig(DetectorConfig):
     imgsz: int | None = None
 
 
+@dataclass
+class ONNXDetectorConfig(DetectorConfig):
+    imgsz: int | None = None
+
+
 class BaseDetector(ABC):
     def __init__(self, config: DetectorConfig):
         self.config = config

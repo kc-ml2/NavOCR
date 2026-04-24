@@ -2,7 +2,7 @@
   ros__parameters:
     # Detector settings shared by ROS and standalone entry points.
     detector_backend: paddle
-    detector_model_path: model/navocr.pdparams
+    detector_model_path: model/paddle/navocr.pdparams
     detector_threshold: 0.5
     detector_device: "cpu"  # or "gpu"
     detector_config_path: configs/paddle/ppyoloe/ppyoloe_crn_s_infer_only.yml

@@ -27,6 +27,14 @@ class OpenVINOOCRConfig(OCRConfig):
     rec_max_w: int | None = None
 
 
+@dataclass
+class ONNXOCRConfig(OCRConfig):
+    dict_path: str | None = None
+    rec_h: int | None = None
+    rec_img_w: int | None = None
+    rec_max_w: int | None = None
+
+
 class BaseOCR(ABC):
     NO_TEXT = 'no_text_detected'
     ERROR = 'ocr_error'

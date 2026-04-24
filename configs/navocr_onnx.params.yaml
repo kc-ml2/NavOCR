@@ -1,0 +1,31 @@
+/**:
+  ros__parameters:
+    # Detector settings shared by ROS and standalone entry points.
+    detector_backend: onnx
+    detector_model_path: model/onnx/rtv4_hgnetv2_s.onnx
+    detector_threshold: 0.5
+    detector_device: "cpu"
+    detector_imgsz: 640
+
+    # OCR settings shared by ROS and standalone entry points.
+    ocr_backend: onnx
+    ocr_model_path: model/onnx/PP-OCRv5_mobile_rec_infer.onnx
+    ocr_dict_path: model/paddle/PP-OCRv5_mobile_rec_infer/inference.yml
+    ocr_threshold: 0.6
+    ocr_device: "cpu"
+    ocr_max_resize: 800
+    ocr_rec_h: 48
+    ocr_rec_img_w: 320
+    ocr_rec_max_w: 3200
+    ocr_language: en
+
+    # Shared output settings used by both ROS and standalone entry points.
+    output_dir: results/ros_result_ocr
+
+    # ROS node runtime settings. These are consumed directly by ros_node.py.
+    save_image: false
+    benchmark: false
+    image_save_interval: 10
+    image_topic: /camera/infra1/image_rect_raw
+    detections_topic: /navocr/detections
+    annotated_image_topic: /navocr/annotated_image
