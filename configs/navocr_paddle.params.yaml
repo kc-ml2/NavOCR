@@ -25,3 +25,5 @@
     image_topic: /camera/infra1/image_rect_raw
     detections_topic: /navocr/detections
     annotated_image_topic: /navocr/annotated_image
+    annotated_font_scale: 1.2
+    annotated_thickness: 2
