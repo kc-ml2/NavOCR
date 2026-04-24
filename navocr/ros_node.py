@@ -33,6 +33,8 @@ class ROSNodeConfig:
     queue_size: int
     temp_file_path: str
     image_save_interval: int
+    annotated_font_scale: float
+    annotated_thickness: int
 
 def get_navocr_share_dir() -> str:
     return get_package_share_directory('navocr')
@@ -82,6 +84,8 @@ class NavOCRNode(Node):
         self.declare_parameter('queue_size', 10)
         self.declare_parameter('temp_file_path', '/tmp/navocr_temp_frame.jpg')
         self.declare_parameter('image_save_interval', 10)
+        self.declare_parameter('annotated_font_scale', 1.2)
+        self.declare_parameter('annotated_thickness', 2)
 
         session_name = self.get_parameter('session_name').value
         if not session_name:
@@ -98,6 +102,8 @@ class NavOCRNode(Node):
             queue_size=int(self.get_parameter('queue_size').value),
             temp_file_path=self.get_parameter('temp_file_path').value,
             image_save_interval=int(self.get_parameter('image_save_interval').value),
+            annotated_font_scale=float(self.get_parameter('annotated_font_scale').value),
+            annotated_thickness=int(self.get_parameter('annotated_thickness').value),
         )
 
     def _create_ros_io(self) -> None:
@@ -166,10 +172,18 @@ class NavOCRNode(Node):
                 ocr_text, frame_ocr_time = self._recognize_text(cropped_image, frame_ocr_time)
 
                 if ocr_text in self.ocr_fail_results:
-                    draw_detection(annotated_image, x1, y1, x2, y2, self.fallback_label)
+                    draw_detection(
+                        annotated_image, x1, y1, x2, y2, self.fallback_label,
+                        font_scale=self.node_config.annotated_font_scale,
+                        font_thickness=self.node_config.annotated_thickness,
+                    )
                     continue
 
-                draw_detection(annotated_image, x1, y1, x2, y2, ocr_text)
+                draw_detection(
+                    annotated_image, x1, y1, x2, y2, ocr_text,
+                    font_scale=self.node_config.annotated_font_scale,
+                    font_thickness=self.node_config.annotated_thickness,
+                )
                 detection_array.detections.append(
                     self._build_detection(msg.header, x1, y1, x2, y2, ocr_text, score)
                 )
