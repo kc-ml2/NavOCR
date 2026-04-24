@@ -119,23 +119,6 @@ python setup.py install
 pip install paddleocr
 ```
 
-### Build ROS 2 package (Optional)
-
-ROS dependencies are declared in `package.xml`. Install them from the workspace root with:
-
-```bash
-rosdep install --from-paths src --ignore-src -r -y
-```
-
-When building inside the venv, invoke colcon through Python so it uses the venv interpreter:
-
-```bash
-cd ~/ros2_ws
-colcon build --symlink-install --packages-select navocr
-python -m colcon build --symlink-install --packages-select navocr  # if you're using venv
-source install/setup.bash
-```
-
 ## Standalone Inference
 
 ### Download Testset
@@ -192,9 +175,24 @@ python navocr_standalone.py \
 
 
 ## ROS 2 Node
-```bash
-# Build ROS 2 package according to "Build ROS 2 package (Optional)" above.
 
+### Build ROS 2 package
+
+ROS dependencies are declared in `package.xml`. Install them from the workspace root with:
+
+```bash
+cd ~/ros2_ws  # your ros2 workspace
+rosdep install --from-paths src --ignore-src -r -y
+
+colcon build --symlink-install --packages-select navocr
+python -m colcon build --symlink-install --packages-select navocr  # if you're using venv
+
+source install/setup.bash
+```
+
+### Run ros2 node
+
+```bash
 ros2 run navocr navocr_with_ocr_node
 ```
 
