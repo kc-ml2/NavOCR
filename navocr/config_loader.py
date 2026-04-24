@@ -8,6 +8,7 @@ from navocr.detector_base import (
     ONNXDetectorConfig,
     OpenVINODetectorConfig,
     PaddleDetectorConfig,
+    PyTorchDetectorConfig,
 )
 from navocr.ocr_base import OCRConfig, ONNXOCRConfig, OpenVINOOCRConfig, PaddleOCRConfig
 
@@ -70,6 +71,13 @@ def load_detector_config(path: str | Path, node_name: str = '/**') -> 'DetectorC
     if backend == 'openvino':
         return OpenVINODetectorConfig(
             **common_kwargs,
+            imgsz=(int(params['detector_imgsz']) if 'detector_imgsz' in params else None),
+        )
+    if backend == 'pytorch':
+        return PyTorchDetectorConfig(
+            **common_kwargs,
+            pytorch_config_path=resolve_navocr_path(config_path, params.get('detector_pytorch_config_path')),
+            engine_root=resolve_navocr_path(config_path, params.get('detector_engine_root')),
             imgsz=(int(params['detector_imgsz']) if 'detector_imgsz' in params else None),
         )
     if backend == 'onnx':

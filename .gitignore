@@ -7,4 +7,4 @@ data
 results
 outputs
 resource
-model/rtv4_hgnetv2_s.pth
+*.pth
