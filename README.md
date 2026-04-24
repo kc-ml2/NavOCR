@@ -97,19 +97,10 @@ pip install paddleocr
 
 ### Build ROS 2 package (Optional)
 
-For the ROS 2 node, make sure your ROS environment includes:
-
-- `rclpy`
-- `sensor_msgs`
-- `vision_msgs`
-- `cv_bridge`
-
-These are required by `navocr/ros_node.py` and are also declared in `package.xml`.
-
-For ROS 2 Humble, you can install the message and bridge packages with:
+ROS dependencies are declared in `package.xml`. Install them from the workspace root with:
 
 ```bash
-sudo apt install ros-humble-cv-bridge ros-humble-sensor-msgs ros-humble-vision-msgs
+rosdep install --from-paths src --ignore-src -r -y
 ```
 
 When building inside the venv, invoke colcon through Python so it uses the venv interpreter:
