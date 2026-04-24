@@ -41,6 +41,7 @@ while irrelevant text, such as advertisements or price tags, is ignored.
 | ONNX         | ONNX Runtime     | CPU / GPU | [RT-DETRv4](https://github.com/RT-DETRs/RT-DETRv4) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | 4.51 |
 | OpenVINO IR  | OpenVINO Runtime | Intel CPU | [RT-DETRv4](https://github.com/RT-DETRs/RT-DETRv4) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | 6.07 |
 | Paddle model | Paddle Inference | CPU / GPU | [PP-YOLOE](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.9/configs/ppyoloe/README.md) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | 1.79 |
+
 *All FPS was measured on 11th Gen Intel(R) Core(TM) i5-1135G7.
 
 ## Installation
