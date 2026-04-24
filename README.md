@@ -12,9 +12,9 @@ while irrelevant text, such as advertisements or price tags, is ignored.
 ## Key features
 
 - Focuses on navigation-relevant text to reduce unnecessary information and improve OCR speed
-- Supports both standalone use and ROS 2 integration
-- Optimized for CPU-first robotic platforms, achieving 8 FPS on Intel CPUs with OpenVINO
-- Supports Paddle and PaddleDetection for GPU environments
+- Supports both standalone and ROS 2 integration
+- Optimized for CPU-first robotic platforms, achieving ~6 FPS on CPUs
+- Supports PaddlePaddle for GPU environments
 
 
 <p align="center">
@@ -30,6 +30,7 @@ while irrelevant text, such as advertisements or price tags, is ignored.
 
 - `navocr_standalone.py`: Run detection + OCR on a single image or a directory
 - `navocr/ros_node.py`: ROS 2 node entry point
+- `configs/navocr_onnx.params.yaml`: ONNX detector + ONNX OCR config (default)
 - `configs/navocr_openvino.params.yaml`: OpenVINO detector + OpenVINO OCR config
 - `configs/navocr_paddle.params.yaml`: PaddleDetection detector + Paddle OCR config
 
@@ -37,15 +38,15 @@ while irrelevant text, such as advertisements or price tags, is ignored.
 
 | Model format | Runtime / engine | Hardware  | Text detection | Text recognition | FPS |
 | ------------ | ---------------- | --------- | -------------- | ---------------- | --- |
-| OpenVINO IR  | OpenVINO Runtime | Intel CPU | [RT-DETRv4](https://github.com/RT-DETRs/RT-DETRv4) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | ... |
-| Paddle model | Paddle Inference | CPU / GPU | [PP-YOLOE](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.9/configs/ppyoloe/README.md) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | ... |
-| ONNX         | ONNX Runtime     | CPU / GPU | ...            | ...              | ... |
-| PyTorch      | PyTorch          | CPU / GPU | ...            | ...              | ... |
+| ONNX         | ONNX Runtime     | CPU / GPU | [RT-DETRv4](https://github.com/RT-DETRs/RT-DETRv4) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | 4.51 |
+| OpenVINO IR  | OpenVINO Runtime | Intel CPU | [RT-DETRv4](https://github.com/RT-DETRs/RT-DETRv4) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | 6.07 |
+| Paddle model | Paddle Inference | CPU / GPU | [PP-YOLOE](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.9/configs/ppyoloe/README.md) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | 1.79 |
+*All FPS was measured on 11th Gen Intel(R) Core(TM) i5-1135G7.
 
 ## Installation
 
 ### Download Model
-Both the OpenVINO models and the PaddlePaddle models are included in this repository.
+ONNX, OpenVINO, PaddlePaddle models are included in this repository.
 
 ```bash
 git clone git@github.com:kc-ml2/NavOCR.git
@@ -63,15 +64,21 @@ pip install --upgrade pip
 pip install colcon-common-extensions
 ```
 
+### For ONNX runtime (default)
 
-### For OpenVINO Backend
+```bash
+pip install onnxruntime pyyaml opencv-python numpy
+```
+
+If you want to run ONNX Runtime on CUDA, install `onnxruntime-gpu` instead of `onnxruntime`.
+
+### For OpenVINO runtime (Optional)
 
 ```bash
 pip install openvino pyyaml opencv-python numpy
 ```
 
-
-### For Paddle Backend (Optional)
+### For Paddle runtime (Optional)
 
 This is only required for paddlepaddle backend.
 
@@ -129,10 +136,15 @@ unzip example_sequence.zip
 cd .. && mkdir results
 ```
 
-### Run with OpenVINO backend
+### Run with ONNX runtime (default)
 ```bash
-git clone git@github.com:kc-ml2/NavOCR.git
+python navocr_standalone.py \
+  --params-file configs/navocr_onnx.params.yaml \
+  --infer_dir data/example_sequence/images
+```
 
+### Run with OpenVINO runtime
+```bash
 # If you encounter oneDNN compatibility issues on CPU, set these before running:
 export FLAGS_enable_pir_api=0
 export FLAGS_enable_pir_in_executor=0
@@ -142,7 +154,7 @@ python navocr_standalone.py \
   --infer_dir data/example_sequence/images
 ```
 
-### Run with Paddle backend
+### Run with Paddle runtime
 ```bash
 python navocr_standalone.py \
   --params-file configs/navocr_paddle.params.yaml \
@@ -152,7 +164,7 @@ python navocr_standalone.py \
 ### Single image
 ```bash
 python navocr_standalone.py \
-  --params-file configs/navocr_openvino.params.yaml \
+  --params-file configs/navocr_onnx.params.yaml \
   --input data/example_sequence/images/000000.jpg
 ```
 
@@ -161,15 +173,16 @@ python navocr_standalone.py \
 ```bash
 # Build ROS 2 package according to "Build ROS 2 package (Optional)" above.
 
-# If you encounter oneDNN compatibility issues on CPU, set these before running:
-export FLAGS_enable_pir_api=0
-export FLAGS_enable_pir_in_executor=0
-
 ros2 run navocr navocr_with_ocr_node
 ```
 
+The default ROS 2 params file is `configs/navocr_onnx.params.yaml`.
+
 If you want to select a different params file at runtime:
 ```bash
+ros2 run navocr navocr_with_ocr_node --ros-args \
+  -p params_file:=/absolute/path/to/configs/navocr_openvino.params.yaml
+
 ros2 run navocr navocr_with_ocr_node --ros-args \
   -p params_file:=/absolute/path/to/configs/navocr_paddle.params.yaml
 ```
@@ -181,12 +194,12 @@ Published topics:
 
 ## Acknowledgements
 
-We gratefully acknowledge the following open-source projects that made this work possible:
-
-- RT-DETRv4: https://github.com/RT-DETRs/RT-DETRv4
-- PaddleDetection: https://github.com/PaddlePaddle/PaddleDetection
-- PaddleOCR / PP-OCRv5: https://github.com/PaddlePaddle/PaddleOCR
-- OpenVINO: https://github.com/openvinotoolkit/openvino
+We gratefully acknowledge the open-source projects that made this work possible:
+[RT-DETRv4](https://github.com/RT-DETRs/RT-DETRv4),
+[PaddleDetection](https://github.com/PaddlePaddle/PaddleDetection),
+[PaddleOCR / PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR),
+[OpenVINO](https://github.com/openvinotoolkit/openvino), and
+[ONNX](https://github.com/onnx/onnx).
 
 
 ## 🚧 Planned Updates

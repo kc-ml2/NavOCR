@@ -23,7 +23,6 @@
     output_dir: results/ros_result_ocr
 
     # ROS node runtime settings. These are consumed directly by ros_node.py.
-    # save_image: false
     save_image: false
     benchmark: false
     image_save_interval: 10
