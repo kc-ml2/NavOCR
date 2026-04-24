@@ -29,6 +29,13 @@ class OpenVINODetectorConfig(DetectorConfig):
 
 
 @dataclass
+class PyTorchDetectorConfig(DetectorConfig):
+    pytorch_config_path: str | None = None
+    engine_root: str | None = None
+    imgsz: int | None = None
+
+
+@dataclass
 class ONNXDetectorConfig(DetectorConfig):
     imgsz: int | None = None
 

@@ -33,6 +33,7 @@ while irrelevant text, such as advertisements or price tags, is ignored.
 - `configs/navocr_onnx.params.yaml`: ONNX detector + ONNX OCR config (default)
 - `configs/navocr_openvino.params.yaml`: OpenVINO detector + OpenVINO OCR config
 - `configs/navocr_paddle.params.yaml`: PaddleDetection detector + Paddle OCR config
+- `configs/navocr_pytorch.params.yaml`: PyTorch detector + Paddle OCR config
 
 ## Backend Composition
 
@@ -41,6 +42,7 @@ while irrelevant text, such as advertisements or price tags, is ignored.
 | ONNX         | ONNX Runtime     | CPU / GPU | [RT-DETRv4](https://github.com/RT-DETRs/RT-DETRv4) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | 4.51 |
 | OpenVINO IR  | OpenVINO Runtime | Intel CPU | [RT-DETRv4](https://github.com/RT-DETRs/RT-DETRv4) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | 6.07 |
 | Paddle model | Paddle Inference | CPU / GPU | [PP-YOLOE](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.9/configs/ppyoloe/README.md) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | 1.79 |
+| PyTorch      | PyTorch          | CPU / GPU | [RT-DETRv4](https://github.com/RT-DETRs/RT-DETRv4) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | 2.05 |
 
 *All FPS was measured on 11th Gen Intel(R) Core(TM) i5-1135G7.
 
@@ -77,6 +79,18 @@ If you want to run ONNX Runtime on CUDA, install `onnxruntime-gpu` instead of `o
 
 ```bash
 pip install openvino pyyaml opencv-python numpy
+```
+
+### For PyTorch runtime (Optional)
+
+```bash
+pip install pyyaml opencv-python numpy
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Download weight
+pip install gdown==5.2.0
+gdown https://drive.google.com/uc?id=1D0zRUmyPvxgXq2rytrzVqg3-5_-5gkDn
+mv rtv4_hgnetv2_s.pth model/pytorch/rtv4_hgnetv2_s.pth
 ```
 
 ### For Paddle runtime (Optional)
@@ -155,6 +169,13 @@ python navocr_standalone.py \
   --infer_dir data/example_sequence/images
 ```
 
+### Run with PyTorch runtime
+```bash
+python navocr_standalone.py \
+  --params-file configs/navocr_pytorch.params.yaml \
+  --infer_dir data/example_sequence/images
+```
+
 ### Run with Paddle runtime
 ```bash
 python navocr_standalone.py \
@@ -181,6 +202,9 @@ The default ROS 2 params file is `configs/navocr_onnx.params.yaml`.
 
 If you want to select a different params file at runtime:
 ```bash
+ros2 run navocr navocr_with_ocr_node --ros-args \
+  -p params_file:=/absolute/path/to/configs/navocr_pytorch.params.yaml
+
 ros2 run navocr navocr_with_ocr_node --ros-args \
   -p params_file:=/absolute/path/to/configs/navocr_openvino.params.yaml
 
