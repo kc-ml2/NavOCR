@@ -31,18 +31,16 @@ setup(
     data_files=data_files,
     install_requires=["setuptools"],
     extras_require={
-        # Dataset preprocessing pipeline (CLIP filter, OCR matching, COCO export).
+        # Dataset generation pipeline (CLIP filter, OCR filtering, COCO export).
         # Note: paddlepaddle/paddleocr are not pip-installed here — install them
         # manually with the right CUDA variant for your hardware. See README. #TODO: readme update
-        "preprocess": [
+        "dataset_generator": [
             "transformers>=4.30",
             "torch",
             "Pillow",
             "textdistance",
             "pyyaml",
         ],
-        # DeepL translation fallback for cross-language store-name matching.
-        "translate": ["deepl"],
     },
     zip_safe=True,
     maintainer="KC-ML2",
@@ -52,7 +50,7 @@ setup(
     entry_points={
         "console_scripts": [
             "navocr_with_ocr_node = navocr.ros_node:main",
-            "preprocess_navocr = navocr.preprocess.runner:main",
+            "generate_navocr_dataset = dataset_generator.runner:main",
         ],
     },
 )

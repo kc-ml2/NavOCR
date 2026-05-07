@@ -1,8 +1,8 @@
-"""CLI orchestrator for the NavOCR preprocessing pipeline.
+"""CLI orchestrator for the NavOCR dataset generation pipeline.
 
 Usage:
-    preprocess_navocr --run-id <run_id> [options]
-    python -m navocr.preprocess.runner --run-id <run_id> [options]
+    generate_navocr_dataset --run-id <run_id> [options]
+    python -m dataset_generator.runner --run-id <run_id> [options]
 
 Arguments:
     --run-id           str, REQUIRED
@@ -15,27 +15,27 @@ Arguments:
                        Parent directory containing the crawled image folder.
 
     --work-root        str, default "data"
-                       Parent directory for the run's manifest, detections,
-                       and the shared translation cache.
+                       Parent directory for the run's manifest and detections.
 
     --output-root      str, default "data/preprocessed"
                        Parent directory for the final COCO dataset output.
 
-    --clip-threshold   float, default 0.7  (override: CLIP_THRESHOLD env)
+    --clip-filter-threshold
+                       float, default 0.7  (override: CLIP_FILTER_THRESHOLD env)
                        Minimum CLIP score (min across 3-pass cascade) for an
                        image to advance to OCR. Lower → more permissive.
 
     --sim-threshold    float, default 0.5  (override: SIMILARITY_THRESHOLD env)
                        Minimum normalized Levenshtein similarity between an
-                       OCR text and the store name (or its DeepL translation)
-                       to label that bbox as a prominent sign.
+                       OCR text and the store name to label that bbox as a
+                       prominent sign.
 
     --device           str, default "cpu"
                        Device for CLIP inference ("cpu" or "cuda").
 
-    --stages           nargs+, default [clip ocr match export]
+    --stages           nargs+, default [clip_filter ocr ocr_filter export]
                        Subset of stages to run, in order. Useful for partial
-                       reruns (e.g. --stages match export).
+                       reruns (e.g. --stages ocr_filter export).
 
     --resume           flag
                        Informational only — every stage already skips rows
@@ -43,8 +43,7 @@ Arguments:
                        inherently idempotent.
 
 Environment variables (also loaded from ./.env if present):
-    DEEPL_AUTH_KEY        Enables DeepL fallback translation in matcher.
-    CLIP_THRESHOLD        Default for --clip-threshold.
+    CLIP_FILTER_THRESHOLD Default for --clip-filter-threshold.
     SIMILARITY_THRESHOLD  Default for --sim-threshold.
 """
 
@@ -60,10 +59,10 @@ from pathlib import Path
 from .clip_filter import CLIPFilter
 from .coco_exporter import COCOExporter
 from .manifest_io import DetectionIO, ManifestIO, ManifestRow, PipelineConfig
-from .matcher import Matcher, TranslationCache
+from .ocr_filter import OCRFilter
 from .ocr_runner import OCRRunner
 
-_ALL_STAGES = ["clip", "ocr", "match", "export"]
+_ALL_STAGES = ["clip_filter", "ocr", "ocr_filter", "export"]
 
 logging.basicConfig(
     level=logging.INFO,
@@ -95,13 +94,11 @@ def run_pipeline(config: PipelineConfig, stages: list[str], resume: bool) -> Non
     image_dir = Path(config.raw_root) / config.run_id / "images"
     work_dir = Path(config.work_root) / config.run_id
     output_root = Path(config.output_root) / config.run_id
-    cache_path = Path(config.work_root) / "cache" / "translations.json"
 
     work_dir.mkdir(parents=True, exist_ok=True)
 
     manifest_io = ManifestIO(work_dir / "manifest.csv")
     detection_io = DetectionIO(work_dir / "detections.csv")
-    cache = TranslationCache(cache_path)
 
     rows = manifest_io.read_all()
     logger.info("Loaded %d manifest rows", len(rows))
@@ -109,11 +106,11 @@ def run_pipeline(config: PipelineConfig, stages: list[str], resume: bool) -> Non
     if resume:
         logger.info("Resume mode: each stage skips rows already past its expected input status")
 
-    if "clip" in stages:
-        logger.info("Stage clip starting — %d total rows", len(rows))
+    if "clip_filter" in stages:
+        logger.info("Stage clip_filter starting — %d total rows", len(rows))
         rows = CLIPFilter(config).run(rows, image_dir, manifest_io)
         rows = manifest_io.read_all()
-        logger.info("Stage clip done — %s", _status_summary(rows))
+        logger.info("Stage clip_filter done — %s", _status_summary(rows))
 
     if "ocr" in stages:
         logger.info("Stage ocr starting — %d total rows", len(rows))
@@ -121,11 +118,11 @@ def run_pipeline(config: PipelineConfig, stages: list[str], resume: bool) -> Non
         rows = manifest_io.read_all()
         logger.info("Stage ocr done — %s", _status_summary(rows))
 
-    if "match" in stages:
-        logger.info("Stage match starting — %d total rows", len(rows))
-        Matcher(config, cache).run(rows, manifest_io, detection_io)
+    if "ocr_filter" in stages:
+        logger.info("Stage ocr_filter starting — %d total rows", len(rows))
+        OCRFilter(config).run(rows, manifest_io, detection_io)
         rows = manifest_io.read_all()
-        logger.info("Stage match done — %s", _status_summary(rows))
+        logger.info("Stage ocr_filter done — %s", _status_summary(rows))
 
     if "export" in stages:
         logger.info("Stage export starting — %d total rows", len(rows))
@@ -140,17 +137,17 @@ def run_pipeline(config: PipelineConfig, stages: list[str], resume: bool) -> Non
 def main() -> None:
     _load_dotenv()
     parser = argparse.ArgumentParser(
-        prog="preprocess_navocr",
-        description="NavOCR preprocessing pipeline",
+        prog="generate_navocr_dataset",
+        description="NavOCR dataset generation pipeline",
     )
     parser.add_argument("--run-id", required=True, type=str)
     parser.add_argument("--raw-root", default="data/raw", type=str)
     parser.add_argument("--work-root", default="data", type=str)
     parser.add_argument("--output-root", default="data/preprocessed", type=str)
     parser.add_argument(
-        "--clip-threshold",
+        "--clip-filter-threshold",
         type=float,
-        default=float(os.environ.get("CLIP_THRESHOLD", "0.7")),
+        default=float(os.environ.get("CLIP_FILTER_THRESHOLD", "0.7")),
     )
     parser.add_argument(
         "--sim-threshold",
@@ -173,9 +170,8 @@ def main() -> None:
         raw_root=args.raw_root,
         work_root=args.work_root,
         output_root=args.output_root,
-        clip_threshold=args.clip_threshold,
+        clip_filter_threshold=args.clip_filter_threshold,
         similarity_threshold=args.sim_threshold,
-        deepl_auth_key=os.environ.get("DEEPL_AUTH_KEY"),
         device=args.device,
     )
 

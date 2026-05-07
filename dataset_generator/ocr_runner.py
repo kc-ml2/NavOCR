@@ -25,7 +25,7 @@ class OCRRunner:
                 "GPU: `pip install paddlepaddle-gpu paddleocr`). "
                 "See https://github.com/PaddlePaddle/PaddleOCR for details."
             ) from exc
-        self._ocr = PaddleOCR(use_textline_orientation=True, lang="korean")
+        self._ocr = PaddleOCR(use_textline_orientation=True, lang="en")
 
     def run_image(self, image_path: Path) -> list[DetectionRow]:
         if self._ocr is None:
@@ -76,7 +76,7 @@ class OCRRunner:
         detection_io: DetectionIO,
     ) -> None:
         for row in rows:
-            if row.status != "clip_pass":
+            if row.status != "clip_filter_pass":
                 continue
 
             image_path = image_dir / row.image_filename

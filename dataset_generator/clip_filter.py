@@ -122,7 +122,11 @@ class CLIPFilter:
                 row = batch[row_idx]
                 score = min_scores[batch_img_idx]
                 row.clip_score = score
-                row.status = "clip_pass" if score >= self._config.clip_threshold else "clip_fail"
+                row.status = (
+                    "clip_filter_pass"
+                    if score >= self._config.clip_filter_threshold
+                    else "clip_filter_fail"
+                )
                 manifest_io.update_row(
                     row.image_filename,
                     clip_score=score,

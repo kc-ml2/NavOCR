@@ -97,9 +97,9 @@ class COCOExporter:
         output_root: Path,
         manifest_io: ManifestIO,
     ) -> None:
-        matched_rows = [r for r in rows if r.status in ("matched", "exported")]
+        ocr_filtered_rows = [r for r in rows if r.status in ("ocr_filtered", "exported")]
 
-        split_map = self.assign_splits(matched_rows)
+        split_map = self.assign_splits(ocr_filtered_rows)
 
         for split in ("train", "val", "test"):
             (output_root / "images" / split).mkdir(parents=True, exist_ok=True)
@@ -122,7 +122,7 @@ class COCOExporter:
         image_id_counter = 0
         annotation_id_counter = 0
 
-        for row in matched_rows:
+        for row in ocr_filtered_rows:
             filename = row.image_filename
             split = split_map.get(filename, "train")
             try:

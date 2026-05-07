@@ -14,17 +14,72 @@ while irrelevant text, such as advertisements or price tags, is ignored.
 - Focuses on navigation-relevant text to reduce unnecessary information and improve OCR speed
 - Supports both standalone and ROS 2 integration
 - Optimized for CPU-first robotic platforms, achieving ~6 FPS on CPUs
-- Supports PaddlePaddle for GPU environments
+- Supports PaddlePaddle and Pytorch for GPU environments
 
 
 <p align="center">
-    <img src="./example.svg" alt="NavOCR_example"
+    <img src="./navocr_example.png" alt="NavOCR_example"
 </p>
 
 <p align="center">
-    <img src="./NavOCR.gif" alt="NavOCR" width="572"/>
+    <img src="./NavOCR.gif" alt="NavOCR" width="514"/>
 </p>
 
+## Dataset Generator (for NeurIPS 2026 ED track submission)
+
+All files for the Dataset Generator are located in the top-level `dataset_generator/` directory.
+If you are interested in model inference instead of dataset generation, go directly to [Installation](#installation) and [Standalone Inference](#standalone-inference).
+
+The `dataset_generator/` package builds a COCO-format training dataset from crawled storefront images:
+
+1. Prepare crawled storefront images and an image-level `manifest.csv`.
+2. CLIP-filter: Use CLIP to filter images that look like store exteriors.
+3. Run PaddleOCR on the filtered images.
+4. OCR-filter: Keep OCR boxes whose text is similar to the target store name.
+5. Export the selected images and boxes as a COCO-format train/val/test dataset under `data/preprocessed/<run_id>/`.
+
+The intermediate progress of each image is stored in `manifest.csv`, and OCR box results are stored in `detections.csv`, so the pipeline can be resumed after a partial run.
+
+**Note.** This implementation corresponds to the Dataset Generation section of the paper. The other implementations are included in this repository, but the first step, image collection using open map resources and search engines, is currently omitted. This is because the Google Search API we used recently stopped accepting new users. A Selenium-based replacement is possible, but we have not yet reached a clear conclusion about its terms of use. We will organize and add the image collection component in a usable form soon.
+
+Files:
+
+- `dataset_generator/runner.py`: CLI entry point and stage orchestrator
+- `dataset_generator/manifest_io.py`: CSV schemas and IO helpers for `manifest.csv` and `detections.csv`
+- `dataset_generator/clip_filter.py`: CLIP-based storefront/signboard image filter
+- `dataset_generator/ocr_runner.py`: PaddleOCR runner for images that pass the CLIP filter
+- `dataset_generator/ocr_filter.py`: Levenshtein-based filter that selects OCR boxes matching the target store name
+- `dataset_generator/coco_exporter.py`: train/val/test split assignment and COCO JSON export
+- `scripts/check_dataset_generator_env.py`: optional dependency and smoke-test checker
+
+Run:
+
+```bash
+# Optional environment check
+python scripts/check_dataset_generator_env.py
+
+# Direct module execution
+python -m dataset_generator.runner --run-id <run_id>
+
+# After editable install
+pip install -e .[dataset_generator]
+generate_navocr_dataset --run-id <run_id>
+```
+
+Expected input layout:
+
+```text
+data/raw/<run_id>/images/
+data/<run_id>/manifest.csv
+```
+
+Default output layout:
+
+```text
+data/<run_id>/detections.csv
+data/preprocessed/<run_id>/images/{train,val,test}/
+data/preprocessed/<run_id>/annotations/instances_{train,val,test}.json
+```
 
 ## Overview
 
@@ -50,10 +105,6 @@ while irrelevant text, such as advertisements or price tags, is ignored.
 
 ### Download Model
 ONNX, OpenVINO, PaddlePaddle models are included in this repository.
-
-```bash
-git clone git@github.com:kc-ml2/NavOCR.git
-```
 
 ### Python Environment Setup (recommended)
 
@@ -121,24 +172,15 @@ pip install paddleocr
 
 ## Standalone Inference
 
-### Download Testset
+The repository includes test images under `navocr_testset/images/test`.
+Due to concerns about exposing nationality information, we did not include all test sets. Nevertheless, this analysis allows us to examine the model’s behavior.
 
-```bash
-# Setup python env
-pip install gdown==5.2.0
-
-# Download sample testset
-mkdir data && cd data
-gdown https://drive.google.com/uc?id=1GcgddRm4GsjPKUOVdmWFzeF5gElCZfx2
-unzip example_sequence.zip 
-cd .. && mkdir results
-```
 
 ### Run with ONNX runtime (default)
 ```bash
 python navocr_standalone.py \
   --params-file configs/navocr_onnx.params.yaml \
-  --infer_dir data/example_sequence/images
+  --infer_dir navocr_testset/images/test
 ```
 
 ### Run with OpenVINO runtime
@@ -149,28 +191,28 @@ export FLAGS_enable_pir_in_executor=0
 
 python navocr_standalone.py \
   --params-file configs/navocr_openvino.params.yaml \
-  --infer_dir data/example_sequence/images
+  --infer_dir navocr_testset/images/test
 ```
 
 ### Run with PyTorch runtime
 ```bash
 python navocr_standalone.py \
   --params-file configs/navocr_pytorch.params.yaml \
-  --infer_dir data/example_sequence/images
+  --infer_dir navocr_testset/images/test
 ```
 
 ### Run with Paddle runtime
 ```bash
 python navocr_standalone.py \
   --params-file configs/navocr_paddle.params.yaml \
-  --infer_dir data/example_sequence/images
+  --infer_dir navocr_testset/images/test
 ```
 
 ### Single image
 ```bash
 python navocr_standalone.py \
   --params-file configs/navocr_onnx.params.yaml \
-  --input data/example_sequence/images/000000.jpg
+  --input navocr_testset/images/test/20251223_140948.jpg
 ```
 
 

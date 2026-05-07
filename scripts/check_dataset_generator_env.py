@@ -1,7 +1,7 @@
-"""NavOCR preprocessing pipeline environment check.
+"""NavOCR dataset generator environment check.
 
 Run from project root:
-    python scripts/check_preprocess_env.py
+    python scripts/check_dataset_generator_env.py
 """
 from __future__ import annotations
 
@@ -10,6 +10,11 @@ import sys
 import platform
 
 from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 _env = Path(".env")
 if _env.exists():
     for _line in _env.read_text(encoding="utf-8").splitlines():
@@ -109,33 +114,15 @@ except ImportError:
     errors.append("paddleocr")
 
 
-# 5. DeepL (Stage 4, optional)
-section("5. DeepL translation (Stage 4, optional)")
-try:
-    import deepl
-    ok(f"deepl          {deepl.__version__}")
-except ImportError:
-    warn("deepl          not installed (translation will be skipped)")
-    warnings_.append("deepl")
-except AttributeError:
-    ok("deepl          installed (version unknown)")
-
-if os.environ.get("DEEPL_AUTH_KEY"):
-    ok("DEEPL_AUTH_KEY env var is set")
-else:
-    warn("DEEPL_AUTH_KEY not set (translation will be skipped at runtime)")
-    warnings_.append("deepl_key")
-
-
-# 6. NavOCR preprocess modules
-section("6. NavOCR preprocess modules")
+# 5. NavOCR dataset generator modules
+section("5. NavOCR dataset generator modules")
 modules = [
-    "navocr.preprocess.manifest_io",
-    "navocr.preprocess.matcher",
-    "navocr.preprocess.coco_exporter",
-    "navocr.preprocess.runner",
-    "navocr.preprocess.clip_filter",
-    "navocr.preprocess.ocr_runner",
+    "dataset_generator.manifest_io",
+    "dataset_generator.ocr_filter",
+    "dataset_generator.coco_exporter",
+    "dataset_generator.runner",
+    "dataset_generator.clip_filter",
+    "dataset_generator.ocr_runner",
 ]
 for mod in modules:
     try:
@@ -146,34 +133,33 @@ for mod in modules:
         errors.append(mod)
 
 
-# 7. CLI entry point
-section("7. CLI entry point")
+# 6. CLI entry point
+section("6. CLI entry point")
 import shutil
-exe = shutil.which("preprocess_navocr")
+exe = shutil.which("generate_navocr_dataset")
 if exe:
-    ok(f"preprocess_navocr available at {exe}")
+    ok(f"generate_navocr_dataset available at {exe}")
 else:
-    warn("preprocess_navocr CLI not on PATH (use `python -m navocr.preprocess.runner` or `pip install -e .`)")
+    warn("generate_navocr_dataset CLI not on PATH (use `python -m dataset_generator.runner` or `pip install -e .`)")
     warnings_.append("cli")
 
 
-# 8. Functional smoke test
-section("8. Functional smoke test")
+# 7. Functional smoke test
+section("7. Functional smoke test")
 try:
-    from navocr.preprocess.manifest_io import ManifestRow, DetectionRow, PipelineConfig
-    from navocr.preprocess.matcher import Matcher, TranslationCache
-    from navocr.preprocess.coco_exporter import COCOExporter
-    import tempfile, json
+    from dataset_generator.manifest_io import PipelineConfig
+    from dataset_generator.ocr_filter import OCRFilter
+    from dataset_generator.coco_exporter import COCOExporter
+    import tempfile
     from pathlib import Path
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         cfg = PipelineConfig("smoke", str(tmp), str(tmp), str(tmp), similarity_threshold=0.5)
-        cache = TranslationCache(tmp / "cache.json")
 
         # Levenshtein
-        m = Matcher(cfg, cache)
-        score, mtype = m.best_score("starbucks", "Starbucks", None, None)
+        f = OCRFilter(cfg)
+        score, ftype = f.best_score("starbucks", "Starbucks")
         assert score >= 0.99, score
 
         # bbox conversion
@@ -181,7 +167,7 @@ try:
         bbox = e.polygon_to_bbox(10, 20, 110, 20, 110, 50, 10, 50)
         assert bbox == [10, 20, 100, 30], bbox
 
-        ok(f"Levenshtein matching works (score={score:.3f}, type={mtype})")
+        ok(f"OCR filtering works (score={score:.3f}, type={ftype})")
         ok(f"polygon→bbox conversion works ({bbox})")
 except Exception as e:
     fail(f"smoke test failed: {e}")

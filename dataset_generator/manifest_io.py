@@ -22,7 +22,6 @@ class ManifestRow:
     ocr_box_count: Optional[int] = None
     top_ocr_text: Optional[str] = None
     best_levenshtein_score: Optional[float] = None
-    translated_store_name: Optional[str] = None
     num_label_boxes: Optional[int] = None
     split: Optional[str] = None
 
@@ -42,7 +41,7 @@ class DetectionRow:
     x4: float
     y4: float
     levenshtein_score: Optional[float] = None
-    match_type: Optional[str] = None
+    ocr_filter_type: Optional[str] = None
     is_prominent_sign: Optional[bool] = None
 
 
@@ -52,9 +51,8 @@ class PipelineConfig:
     raw_root: str
     work_root: str
     output_root: str
-    clip_threshold: float = 0.7
+    clip_filter_threshold: float = 0.7
     similarity_threshold: float = 0.5
-    deepl_auth_key: Optional[str] = None
     device: str = "cpu"
 
 
@@ -91,7 +89,6 @@ def _row_to_manifest(row: dict[str, str]) -> ManifestRow:
         ocr_box_count=_opt_int(row.get("ocr_box_count", "")),
         top_ocr_text=row.get("top_ocr_text") or None,
         best_levenshtein_score=_opt_float(row.get("best_levenshtein_score", "")),
-        translated_store_name=row.get("translated_store_name") or None,
         num_label_boxes=_opt_int(row.get("num_label_boxes", "")),
         split=row.get("split") or None,
     )
@@ -112,7 +109,7 @@ def _row_to_detection(row: dict[str, str]) -> DetectionRow:
         x4=float(row["x4"]),
         y4=float(row["y4"]),
         levenshtein_score=_opt_float(row.get("levenshtein_score", "")),
-        match_type=row.get("match_type") or None,
+        ocr_filter_type=row.get("ocr_filter_type") or None,
         is_prominent_sign=_opt_bool(row.get("is_prominent_sign", "")),
     )
 
