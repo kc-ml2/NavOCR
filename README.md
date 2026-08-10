@@ -55,7 +55,6 @@ while irrelevant text, such as advertisements or price tags, is ignored.
 ONNX, OpenVINO, PaddlePaddle models are included in this repository.
 
 ```bash
-
 git clone git@github.com:kc-ml2/NavOCR.git
 ```
 
