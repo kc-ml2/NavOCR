@@ -14,8 +14,6 @@ It is designed for robotic navigation scenarios, where only navigation-relevant 
 
 while irrelevant text, such as advertisements or price tags, is ignored.
 
-
-
 ## Key features
 
 - Focuses on navigation-relevant text to reduce unnecessary information and improve OCR speed
