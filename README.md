@@ -1,5 +1,10 @@
 # NavOCR
 
+<p align="center">
+    <img src="./NavOCR_ML2.png" alt="NavOCR_logo"
+</p>
+
+
 A lightweight, navigation-oriented OCR framework.
 
 It is designed for robotic navigation scenarios, where only navigation-relevant text should be detected, such as:
@@ -8,6 +13,8 @@ It is designed for robotic navigation scenarios, where only navigation-relevant 
 - Room numbers
 
 while irrelevant text, such as advertisements or price tags, is ignored.
+
+
 
 ## Key features
 
@@ -52,6 +59,7 @@ while irrelevant text, such as advertisements or price tags, is ignored.
 ONNX, OpenVINO, PaddlePaddle models are included in this repository.
 
 ```bash
+
 git clone git@github.com:kc-ml2/NavOCR.git
 ```
 
