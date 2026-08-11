@@ -1,5 +1,8 @@
 # NavOCR
 
+<p align="center">
+    <img src="./NavOCR_ML2.png" alt="NavOCR_logo"
+</p>
 A lightweight, navigation-oriented OCR framework.
 
 It is designed for robotic navigation scenarios, where only navigation-relevant text should be detected, such as:
