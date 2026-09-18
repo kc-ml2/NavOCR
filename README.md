@@ -9,8 +9,10 @@ It is designed for robotic navigation scenarios, where only navigation-relevant 
 
 - Signboards
 - Room numbers
+- (coming soon) Directional signs
 
-while irrelevant text, such as advertisements or price tags, is ignored.
+while irrelevant text, such as advertisements or price tags, is ignored.  
+If you'd like to see an example of SLAM using NavOCR, check it out our [TextMap examples](https://github.com/kc-ml2/TextMap_Examples).
 
 ## Key features
 
