@@ -8,3 +8,4 @@ results
 outputs
 resource
 *.pth
+.env
