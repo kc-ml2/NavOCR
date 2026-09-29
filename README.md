@@ -14,6 +14,8 @@ It is designed for robotic navigation scenarios, where only navigation-relevant 
 while irrelevant text, such as advertisements or price tags, is ignored.  
 If you'd like to see an example of SLAM using NavOCR, check it out our [TextMap examples](https://github.com/kc-ml2/TextMap_Examples).
 
+📌 **Note:** This repository currently focuses on the NavOCR **inference model**. The NavOCR **dataset generator** for the **NeurIPS 2026** ED Track will be released together with the camera-ready manuscript. The update is coming soon.
+
 ## Key features
 
 - Focuses on navigation-relevant text to reduce unnecessary information and improve OCR speed
