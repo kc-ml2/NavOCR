@@ -48,7 +48,7 @@ class BaseDetector(ABC):
         self.output_dir = self.config.output_dir
 
     def get_class_name(self, class_id: int) -> str:
-            return self.class_names.get(class_id, f"class_{class_id}")
+        return self.class_names.get(class_id, f"class_{class_id}")
 
     @abstractmethod
     def infer(self, image_list):
