@@ -1,6 +1,13 @@
 import cv2
 import numpy as np
 
+CLASS_COLORS = {
+    0 : (0, 255, 0),  # Green for class 0
+    1 : (0, 0, 255),  # Red for class 1
+}
+
+def get_class_color(class_id: int) -> tuple[int, int, int]:
+    return CLASS_COLORS.get(class_id, (0, 255, 0))  # Default to green if class_id not found
 
 def draw_detection(
     image,

@@ -19,7 +19,7 @@ import cv2
 
 from navocr import create_detector, create_ocr
 from navocr.config_loader import load_detector_config, load_ocr_config, load_ros_parameters
-from navocr.pipeline_utils import clip_bbox, draw_detection, load_image
+from navocr.pipeline_utils import clip_bbox, draw_detection, load_image, get_class_color
 
 
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.webp'}
@@ -37,7 +37,8 @@ class NavOCRPipeline:
         for result in results:
             x1, y1, x2, y2 = result['box']
             text = result['text'] if result['text'] not in OCR_FAIL_RESULTS else 'text'
-            draw_detection(vis, x1, y1, x2, y2, text)
+            bbox_color = get_class_color(result['class_id'])
+            draw_detection(vis, x1, y1, x2, y2, text, bbox_color=bbox_color)
         cv2.imwrite(str(output_path), vis)
         print(f'[OUT] Saved -> {output_path}')
 
@@ -73,10 +74,11 @@ class NavOCRPipeline:
                 frame_ocr_time += time.perf_counter() - ocr_start
 
                 parsed_results.append({
+                    'class_id': int(cls_id),
+                    'class_name': self.detector.get_class_name(int(cls_id)),
                     'box': (x1, y1, x2, y2),
                     'score': float(score),
                     'text': ocr_text,
-                    'class_id': int(cls_id),
                 })
         total_time = time.perf_counter() - frame_start
         det_fps = (1.0 / detection_time) if detection_time > 0 else 0.0

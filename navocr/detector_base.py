@@ -43,8 +43,12 @@ class ONNXDetectorConfig(DetectorConfig):
 class BaseDetector(ABC):
     def __init__(self, config: DetectorConfig):
         self.config = config
+        self.class_names = {}
         self.detection_threshold = self.config.detection_threshold
         self.output_dir = self.config.output_dir
+
+    def get_class_name(self, class_id: int) -> str:
+            return self.class_names.get(class_id, f"class_{class_id}")
 
     @abstractmethod
     def infer(self, image_list):
