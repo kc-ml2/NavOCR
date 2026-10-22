@@ -9,6 +9,7 @@ from navocr.detector_base import (
     ONNXDetectorConfig,
     OpenVINODetectorConfig,
     PaddleDetectorConfig,
+    PPYOLOEPreprocessConfig,
     PyTorchDetectorConfig,
 )
 from navocr.ocr_base import OCRConfig, ONNXOCRConfig, OpenVINOOCRConfig, PaddleOCRConfig
@@ -52,6 +53,31 @@ def resolve_navocr_path(config_path: Path, value: str | None) -> str | None:
     return str((project_root / candidate).resolve())
 
 
+def load_ppyoloe_preprocess_config(path: str | Path) -> PPYOLOEPreprocessConfig:
+    with Path(path).expanduser().open(encoding='utf-8') as handle:
+        reader = yaml.safe_load(handle)['TestReader']
+    transforms = reader['sample_transforms']
+    expected = ('Decode', 'Resize', 'Pad', 'NormalizeImage', 'Permute')
+    if tuple(name for transform in transforms for name in transform) != expected:
+        raise ValueError(f'TestReader.sample_transforms must follow {expected}')
+    if reader.get('fuse_normalize', False):
+        raise ValueError('External PP-YOLOE preprocessing requires TestReader.fuse_normalize=False')
+    stages = {name: options for transform in transforms for name, options in transform.items()}
+    resize, pad, normalize = (stages[name] for name in ('Resize', 'Pad', 'NormalizeImage'))
+    if pad['pad_mode'] != 0:
+        raise ValueError('PP-YOLOE scale_factor coordinates require Pad.pad_mode=0 (right/bottom padding)')
+    return PPYOLOEPreprocessConfig(
+        target_size=tuple(resize['target_size']),
+        keep_ratio=resize['keep_ratio'],
+        interp=resize['interp'],
+        pad_size=tuple(pad['size']),
+        fill_value=tuple(pad['fill_value']),
+        mean=tuple(normalize['mean']),
+        std=tuple(normalize['std']),
+        is_scale=normalize['is_scale'],
+    )
+
+
 def load_detector_config(path: str | Path, node_name: str = '/**') -> 'DetectorConfig':
     params, config_path = load_ros_parameters(path, node_name=node_name)
     backend = params.get('detector_backend')
@@ -66,6 +92,7 @@ def load_detector_config(path: str | Path, node_name: str = '/**') -> 'DetectorC
     common_kwargs = dict(
         backend=backend,
         model_path=resolve_navocr_path(config_path, params.get('detector_model_path')),
+        detector_config_path=resolve_navocr_path(config_path, params.get('detector_config_path')),
         class_names={0: category_names[1], 1: category_names[2]},
         detection_threshold=float(params.get('detector_threshold', 0.5)),
         output_dir=resolve_navocr_path(config_path, params.get('output_dir')) or '',
@@ -75,26 +102,18 @@ def load_detector_config(path: str | Path, node_name: str = '/**') -> 'DetectorC
     if backend == 'paddle':
         return PaddleDetectorConfig(
             **common_kwargs,
-            detector_config_path=resolve_navocr_path(config_path, params.get('detector_config_path')),
             quiet_logs=bool(params.get('detector_quiet_logs', False)),
         )
-    if backend == 'openvino':
-        return OpenVINODetectorConfig(
-            **common_kwargs,
-            imgsz=(int(params['detector_imgsz']) if 'detector_imgsz' in params else None),
-        )
-    if backend == 'pytorch':
-        return PyTorchDetectorConfig(
-            **common_kwargs,
-            pytorch_config_path=resolve_navocr_path(config_path, params.get('detector_pytorch_config_path')),
-            engine_root=resolve_navocr_path(config_path, params.get('detector_engine_root')),
-            imgsz=(int(params['detector_imgsz']) if 'detector_imgsz' in params else None),
-        )
-    if backend == 'onnx':
-        return ONNXDetectorConfig(
-            **common_kwargs,
-            imgsz=(int(params['detector_imgsz']) if 'detector_imgsz' in params else None),
-        )
+    if backend in ('onnx', 'openvino', 'pytorch'):
+        if not common_kwargs['detector_config_path']:
+            raise ValueError(f'{backend} detector_config_path is required')
+        preprocess = load_ppyoloe_preprocess_config(common_kwargs['detector_config_path'])
+        config_type = {
+            'onnx': ONNXDetectorConfig,
+            'openvino': OpenVINODetectorConfig,
+            'pytorch': PyTorchDetectorConfig,
+        }[backend]
+        return config_type(**common_kwargs, preprocess=preprocess)
     return DetectorConfig(**common_kwargs)
 
 
