@@ -22,7 +22,6 @@ from ppdet.core.workspace import load_config
 from ppdet.engine import Trainer
 from ppdet.utils.check import check_version, check_config
 from ppdet.utils.cli import merge_args
-from ppdet.data.source.category import get_categories
 
 from navocr.config_loader import infer_project_root
 from navocr.detector_base import BaseDetector, PaddleDetectorConfig
@@ -58,15 +57,7 @@ class PaddleDetector(BaseDetector):
         self.cfg["pretrain_weights"] = None
         self.trainer = Trainer(self.cfg, mode="test")
         self.trainer.load_weights(self.config.model_path)
-        clsid2catid, catid2name = get_categories(
-            self.cfg.metric,
-            anno_file=self.trainer.dataset.get_anno(),
-        )
-        self.class_names = {
-            cls_id: catid2name[cat_id]
-            for cls_id, cat_id in clsid2catid.items()
-        }
-
+        
     def _set_device(self):
         if self.config.device:
             paddle.set_device(str(self.config.device).lower())

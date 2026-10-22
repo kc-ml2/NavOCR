@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import json
 import yaml
 from navocr.detector_base import (
     DetectorConfig,
@@ -54,9 +55,18 @@ def resolve_navocr_path(config_path: Path, value: str | None) -> str | None:
 def load_detector_config(path: str | Path, node_name: str = '/**') -> 'DetectorConfig':
     params, config_path = load_ros_parameters(path, node_name=node_name)
     backend = params.get('detector_backend')
+    annotation_path = infer_project_root(config_path) / (
+        "configs/paddle/datasets/metadata/annotations/instances_test.json"
+    )
+    with annotation_path.open(encoding="utf-8") as handle:
+        category_names = {
+            category["id"]: category["name"]
+            for category in json.load(handle)["categories"]
+        }
     common_kwargs = dict(
         backend=backend,
         model_path=resolve_navocr_path(config_path, params.get('detector_model_path')),
+        class_names={0: category_names[1], 1: category_names[2]},
         detection_threshold=float(params.get('detector_threshold', 0.5)),
         output_dir=resolve_navocr_path(config_path, params.get('output_dir')) or '',
         device=params.get('detector_device') or None,

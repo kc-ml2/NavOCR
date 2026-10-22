@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
 class DetectorConfig:
     backend: str | None = None
     model_path: str | None = None
+    class_names: dict[int, str] = field(default_factory=dict)    
     detection_threshold: float = 0.5
     device: str | None = None
     output_dir: str = ""
@@ -43,7 +44,7 @@ class ONNXDetectorConfig(DetectorConfig):
 class BaseDetector(ABC):
     def __init__(self, config: DetectorConfig):
         self.config = config
-        self.class_names = {}
+        self.class_names = config.class_names
         self.detection_threshold = self.config.detection_threshold
         self.output_dir = self.config.output_dir
 
