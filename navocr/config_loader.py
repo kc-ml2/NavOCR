@@ -12,7 +12,13 @@ from navocr.detector_base import (
     PPYOLOEPreprocessConfig,
     PyTorchDetectorConfig,
 )
-from navocr.ocr_base import OCRConfig, ONNXOCRConfig, OpenVINOOCRConfig, PaddleOCRConfig
+from navocr.ocr_base import (
+    OCRConfig,
+    ONNXOCRConfig,
+    OpenVINOOCRConfig,
+    PaddleOCRConfig,
+    PyTorchOCRConfig,
+)
 
 
 def load_ros_parameters(path: str | Path, node_name: str = '/**') -> tuple[dict, Path]:
@@ -131,16 +137,13 @@ def load_ocr_config(path: str | Path, node_name: str = '/**') -> 'OCRConfig':
 
     if backend == 'paddle':
         return PaddleOCRConfig(**common_kwargs)
-    if backend == 'openvino':
-        return OpenVINOOCRConfig(
-            **common_kwargs,
-            dict_path=resolve_navocr_path(config_path, params.get('ocr_dict_path')),
-            rec_h=(int(params['ocr_rec_h']) if 'ocr_rec_h' in params else None),
-            rec_img_w=(int(params['ocr_rec_img_w']) if 'ocr_rec_img_w' in params else None),
-            rec_max_w=(int(params['ocr_rec_max_w']) if 'ocr_rec_max_w' in params else None),
-        )
-    if backend == 'onnx':
-        return ONNXOCRConfig(
+    if backend in ('onnx', 'openvino', 'pytorch'):
+        config_type = {
+            'onnx': ONNXOCRConfig,
+            'openvino': OpenVINOOCRConfig,
+            'pytorch': PyTorchOCRConfig,
+        }[backend]
+        return config_type(
             **common_kwargs,
             dict_path=resolve_navocr_path(config_path, params.get('ocr_dict_path')),
             rec_h=(int(params['ocr_rec_h']) if 'ocr_rec_h' in params else None),

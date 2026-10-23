@@ -8,10 +8,15 @@
     detector_config_path: configs/paddle/ppyoloe/ppyoloe_crn_s_infer_only.yml
 
     # OCR settings shared by ROS and standalone entry points.
-    ocr_backend: paddle
+    ocr_backend: pytorch
+    ocr_model_path: model/pytorch/PP-OCRv5_mobile_rec_infer.pt
+    ocr_dict_path: model/paddle/PP-OCRv5_mobile_rec_infer/inference.yml
     ocr_threshold: 0.6
-    ocr_device: "cpu"  # or "gpu"
+    ocr_device: "cpu"  # or "cuda"
     ocr_max_resize: 800
+    ocr_rec_h: 48
+    ocr_rec_img_w: 320
+    ocr_rec_max_w: 3200
     ocr_language: en
 
     # Shared output settings used by both ROS and standalone entry points.
