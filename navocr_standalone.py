@@ -16,14 +16,14 @@ import time
 from pathlib import Path
 
 import cv2
+import numpy as np
 
 from navocr import create_detector, create_ocr
 from navocr.config_loader import load_detector_config, load_ocr_config, load_ros_parameters
-from navocr.pipeline_utils import clip_bbox, draw_detection, load_image
+from navocr.pipeline_utils import clip_bbox, load_image, render_result_image
 
 
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.webp'}
-OCR_FAIL_RESULTS = {'no_text_detected', 'empty_crop', 'ocr_error'}
 
 
 class NavOCRPipeline:
@@ -32,12 +32,8 @@ class NavOCRPipeline:
         self.ocr = ocr
         self.conf_threshold = conf_threshold
 
-    def save_result(self, orig_bgr: np.ndarray, results: list[dict], output_path: str):
-        vis = orig_bgr.copy()
-        for result in results:
-            x1, y1, x2, y2 = result['box']
-            text = result['text'] if result['text'] not in OCR_FAIL_RESULTS else 'text'
-            draw_detection(vis, x1, y1, x2, y2, text)
+    def save_result(self, orig_bgr: np.ndarray, results: list[dict], output_path: str) -> None:
+        vis = render_result_image(orig_bgr, results)
         cv2.imwrite(str(output_path), vis)
         print(f'[OUT] Saved -> {output_path}')
 
@@ -73,10 +69,11 @@ class NavOCRPipeline:
                 frame_ocr_time += time.perf_counter() - ocr_start
 
                 parsed_results.append({
+                    'class_id': int(cls_id),
+                    'class_name': self.detector.get_class_name(int(cls_id)),
                     'box': (x1, y1, x2, y2),
                     'score': float(score),
                     'text': ocr_text,
-                    'class_id': int(cls_id),
                 })
         total_time = time.perf_counter() - frame_start
         det_fps = (1.0 / detection_time) if detection_time > 0 else 0.0

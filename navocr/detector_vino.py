@@ -15,14 +15,18 @@
 import os
 from typing import List
 
-import cv2
 import numpy as np
 import openvino as ov
 
 from navocr.detector_base import BaseDetector, OpenVINODetectorConfig
+from navocr.detector_preprocess import preprocess_ppyoloe, validate_preprocess_input_shape
+from navocr.pipeline_utils import load_image
 
 
 class OpenVINODetector(BaseDetector):
+    DETECTIONS_OUTPUT_NAME = 'fetch_name_0'
+    DETECTION_COUNT_OUTPUT_NAME = 'fetch_name_1'
+
     def __init__(self, config: OpenVINODetectorConfig):
         super().__init__(config)
         self.xml_path = self.config.model_path
@@ -30,120 +34,47 @@ class OpenVINODetector(BaseDetector):
             raise ValueError('Detector model path is required')
         if not os.path.isfile(self.xml_path):
             raise FileNotFoundError(f'OpenVINO detector model not found: {self.xml_path}')
-        if self.config.imgsz is None:
-            raise ValueError('OpenVINO detector imgsz is required')
+        if self.config.preprocess is None:
+            raise ValueError('OpenVINO detector preprocessing config is required')
 
         self.device = self.config.device or 'CPU'
-        self.imgsz = self.config.imgsz
 
         core = ov.Core()
-        config = {'PERFORMANCE_HINT': 'LATENCY'}
-        if str(self.device).upper().startswith('GPU'):
-            config['INFERENCE_PRECISION_HINT'] = 'f32'
+        config = {'PERFORMANCE_HINT': 'LATENCY', 'INFERENCE_PRECISION_HINT': 'f32'}
 
         model = core.read_model(self.xml_path)
+        shape = [dim.get_length() if dim.is_static else None for dim in model.input('image').partial_shape]
+        validate_preprocess_input_shape(shape, self.config.preprocess)
         self.compiled = core.compile_model(model, self.device, config=config)
         self.infer_request = self.compiled.create_infer_request()
 
-        self.images_input = self._resolve_input(['images'])
-        self.orig_sizes_input = self._resolve_input(['orig_target_sizes'])
-        self.labels_output = self._resolve_output(['labels'])
-        self.boxes_output = self._resolve_output(['boxes'])
-        self.scores_output = self._resolve_output(['scores'])
-
-    def _resolve_input(self, preferred_names: List[str]):
-        for name in preferred_names:
-            try:
-                return self.compiled.input(name)
-            except Exception:
-                pass
-        for port in self.compiled.inputs:
-            any_name = getattr(port, 'any_name', '') or ''
-            if any(pref in any_name for pref in preferred_names):
-                return port
-        if len(self.compiled.inputs) == 1:
-            return self.compiled.input(0)
-        raise RuntimeError(f'Failed to resolve input from {preferred_names}')
-
-    def _resolve_output(self, preferred_names: List[str]):
-        for name in preferred_names:
-            try:
-                return self.compiled.output(name)
-            except Exception:
-                pass
-        for port in self.compiled.outputs:
-            any_name = getattr(port, 'any_name', '') or ''
-            if any(pref in any_name for pref in preferred_names):
-                return port
-        raise RuntimeError(f'Failed to resolve output from {preferred_names}')
-
-    @staticmethod
-    def _letterbox(image: np.ndarray, size: int = 640):
-        h, w = image.shape[:2]
-        ratio = min(size / w, size / h)
-        new_w, new_h = int(w * ratio), int(h * ratio)
-        resized = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
-        padded = np.full((size, size, 3), 114, dtype=np.uint8)
-        pad_w = (size - new_w) // 2
-        pad_h = (size - new_h) // 2
-        padded[pad_h:pad_h + new_h, pad_w:pad_w + new_w] = resized
-        return padded, ratio, pad_w, pad_h
+        self.image_input = self.compiled.input('image')
+        self.scale_input = self.compiled.input('scale_factor')
+        self.detections_output = self.compiled.output(self.DETECTIONS_OUTPUT_NAME)
+        self.detection_count_output = self.compiled.output(self.DETECTION_COUNT_OUTPUT_NAME)
 
     def _preprocess(self, bgr: np.ndarray):
-        padded, ratio, pad_w, pad_h = self._letterbox(bgr, self.imgsz)
-        rgb = cv2.cvtColor(padded, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
-        blob = rgb.transpose(2, 0, 1)[np.newaxis]
-        orig_size = np.array([[self.imgsz, self.imgsz]], dtype=np.int64)
-        return blob, orig_size, ratio, pad_w, pad_h
-
-    @staticmethod
-    def _map_boxes_to_original(boxes: np.ndarray, ratio: float, pad_w: int, pad_h: int,
-                               orig_w: int, orig_h: int) -> np.ndarray:
-        boxes = boxes.copy()
-        boxes[:, [0, 2]] -= pad_w
-        boxes[:, [1, 3]] -= pad_h
-        boxes /= ratio
-        boxes[:, [0, 2]] = boxes[:, [0, 2]].clip(0, orig_w)
-        boxes[:, [1, 3]] = boxes[:, [1, 3]].clip(0, orig_h)
-        return boxes
+        return preprocess_ppyoloe(bgr, self.config.preprocess)
 
     def infer(self, image_list):
         results = []
         for image_path in image_list:
-            bgr = cv2.imdecode(np.fromfile(image_path, dtype=np.uint8), cv2.IMREAD_COLOR)
-            if bgr is None:
-                raise FileNotFoundError(f'Cannot read image: {image_path}')
-            results.append(self._infer_bgr(bgr))
+            results.append(self._infer_bgr(load_image(image_path)))
         return results
 
     def infer_loaded_images(self, image_list: List[np.ndarray]):
         return [self._infer_bgr(bgr) for bgr in image_list]
 
     def _infer_bgr(self, bgr: np.ndarray):
-        if bgr is None:
-            raise ValueError('Input image is None')
-        if not isinstance(bgr, np.ndarray):
-            raise TypeError(f'Expected np.ndarray, got {type(bgr)!r}')
-
-        if bgr.ndim != 3 or bgr.shape[2] != 3:
-            raise ValueError(f'Expected BGR image with shape [H, W, 3], got {bgr.shape}')
-
-        orig_h, orig_w = bgr.shape[:2]
-        blob, orig_size, ratio, pad_w, pad_h = self._preprocess(bgr)
+        feed = self._preprocess(bgr)
         outputs = self.infer_request.infer({
-            self.images_input.any_name: blob,
-            self.orig_sizes_input.any_name: orig_size,
+            self.image_input.any_name: feed['image'],
+            self.scale_input.any_name: feed['scale_factor'],
         })
+        boxes = np.asarray(outputs[self.detections_output], dtype=np.float32)
+        count = outputs[self.detection_count_output].item()
+        if boxes.shape != (count, 6):
+            raise RuntimeError(f'Expected bbox shape ({count}, 6), got {boxes.shape}')
 
-        labels = outputs[self.labels_output][0]
-        boxes = outputs[self.boxes_output][0]
-        scores = outputs[self.scores_output][0]
-        boxes = self._map_boxes_to_original(boxes, ratio, pad_w, pad_h, orig_w, orig_h)
-
-        keep = scores > self.detection_threshold
-        packed = []
-        for lbl, score, box in zip(labels[keep], scores[keep], boxes[keep]):
-            x1, y1, x2, y2 = box.astype(np.float32).tolist()
-            packed.append([float(lbl), float(score), x1, y1, x2, y2])
-
-        return {'bbox': np.asarray(packed, dtype=np.float32)}
+        keep = (boxes[:, 0] >= 0) & (boxes[:, 1] >= self.detection_threshold)
+        return {'bbox': boxes[keep]}

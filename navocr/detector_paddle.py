@@ -57,7 +57,7 @@ class PaddleDetector(BaseDetector):
         self.cfg["pretrain_weights"] = None
         self.trainer = Trainer(self.cfg, mode="test")
         self.trainer.load_weights(self.config.model_path)
-
+        
     def _set_device(self):
         if self.config.device:
             paddle.set_device(str(self.config.device).lower())

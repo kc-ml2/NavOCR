@@ -17,6 +17,7 @@ OCR_BACKENDS = {
     'paddle': 'navocr.ocr_paddle:PaddleOCRRecognizer',
     'openvino': 'navocr.ocr_vino:OpenVINOOCRRecognizer',
     'onnx': 'navocr.ocr_onnx:ONNXOCRRecognizer',
+    'pytorch': 'navocr.ocr_pytorch:PyTorchOCRRecognizer',
 }
 
 

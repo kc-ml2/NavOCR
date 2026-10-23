@@ -1,13 +1,27 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+
+@dataclass(frozen=True)
+class PPYOLOEPreprocessConfig:
+    target_size: tuple[int, int]
+    keep_ratio: bool
+    interp: int
+    pad_size: tuple[int, int]
+    fill_value: tuple[float, float, float]
+    mean: tuple[float, float, float]
+    std: tuple[float, float, float]
+    is_scale: bool
 
 
 @dataclass
 class DetectorConfig:
     backend: str | None = None
     model_path: str | None = None
+    detector_config_path: str | None = None
+    class_names: dict[int, str] = field(default_factory=dict)    
     detection_threshold: float = 0.5
     device: str | None = None
     output_dir: str = ""
@@ -19,32 +33,33 @@ class DetectorConfig:
 
 @dataclass
 class PaddleDetectorConfig(DetectorConfig):
-    detector_config_path: str | None = None
     quiet_logs: bool = False
 
 
 @dataclass
 class OpenVINODetectorConfig(DetectorConfig):
-    imgsz: int | None = None
+    preprocess: PPYOLOEPreprocessConfig | None = None
 
 
 @dataclass
 class PyTorchDetectorConfig(DetectorConfig):
-    pytorch_config_path: str | None = None
-    engine_root: str | None = None
-    imgsz: int | None = None
+    preprocess: PPYOLOEPreprocessConfig | None = None
 
 
 @dataclass
 class ONNXDetectorConfig(DetectorConfig):
-    imgsz: int | None = None
+    preprocess: PPYOLOEPreprocessConfig | None = None
 
 
 class BaseDetector(ABC):
     def __init__(self, config: DetectorConfig):
         self.config = config
+        self.class_names = config.class_names
         self.detection_threshold = self.config.detection_threshold
         self.output_dir = self.config.output_dir
+
+    def get_class_name(self, class_id: int) -> str:
+        return self.class_names.get(class_id, f"class_{class_id}")
 
     @abstractmethod
     def infer(self, image_list):

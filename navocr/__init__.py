@@ -6,7 +6,7 @@ from navocr.detector_base import (
     OpenVINODetectorConfig,
     PaddleDetectorConfig,
 )
-from navocr.ocr_base import BaseOCR, OCRConfig, OpenVINOOCRConfig, PaddleOCRConfig
+from navocr.ocr_base import BaseOCR, OCRConfig, OpenVINOOCRConfig, PaddleOCRConfig, PyTorchOCRConfig
 
 __all__ = [
     'BaseDetector',
@@ -17,6 +17,7 @@ __all__ = [
     'OpenVINODetectorConfig',
     'PaddleOCRConfig',
     'OpenVINOOCRConfig',
+    'PyTorchOCRConfig',
     'create_detector',
     'create_ocr',
     'load_detector_config',
