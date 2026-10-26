@@ -6,6 +6,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 import openvino as ov
+import yaml
 
 from navocr.ocr_base import BaseOCR, OpenVINOOCRConfig
 
@@ -15,20 +16,20 @@ class OpenVINOOCRRecognizer(BaseOCR):
         super().__init__(config)
 
         if not self.config.model_path:
-            raise ValueError('OpenVINO OCR model path is required')
+            raise ValueError("OpenVINO OCR model path is required")
         if not self.config.dict_path:
-            raise ValueError('OpenVINO OCR dictionary path is required')
+            raise ValueError("OpenVINO OCR dictionary path is required")
         if self.config.rec_h is None or self.config.rec_img_w is None or self.config.rec_max_w is None:
-            raise ValueError('OpenVINO OCR preprocessing dimensions are required')
+            raise ValueError("OpenVINO OCR preprocessing dimensions are required")
 
         core = ov.Core()
-        compile_config = {'PERFORMANCE_HINT': 'LATENCY'}
-        if str(self.config.device or 'CPU').upper().startswith('GPU'):
-            compile_config['INFERENCE_PRECISION_HINT'] = 'f32'
+        compile_config = {"PERFORMANCE_HINT": "LATENCY"}
+        if str(self.config.device or "CPU").upper().startswith("GPU"):
+            compile_config["INFERENCE_PRECISION_HINT"] = "f32"
 
         self.rec_model = core.compile_model(
             core.read_model(self.config.model_path),
-            self.config.device or 'CPU',
+            self.config.device or "CPU",
             config=compile_config,
         )
         self.char_list = self._load_char_list(self.config.dict_path)
@@ -37,19 +38,17 @@ class OpenVINOOCRRecognizer(BaseOCR):
     def _load_char_list(dict_path: str) -> list[str]:
         path = Path(dict_path)
         if not path.exists():
-            raise FileNotFoundError(f'Character dictionary not found: {dict_path}')
+            raise FileNotFoundError(f"Character dictionary not found: {dict_path}")
 
-        if path.suffix.lower() in ('.yml', '.yaml'):
-            import yaml
-
-            with open(path, encoding='utf-8') as handle:
+        if path.suffix.lower() in (".yml", ".yaml"):
+            with open(path, encoding="utf-8") as handle:
                 cfg = yaml.safe_load(handle)
-            chars = cfg['PostProcess']['character_dict']
-            return [''] + [str(char) for char in chars] + [' ']
+            chars = cfg["PostProcess"]["character_dict"]
+            return [""] + [str(char) for char in chars] + [" "]
 
-        with open(path, encoding='utf-8') as handle:
-            chars = [line.rstrip('\n') for line in handle]
-        return [''] + chars + [' ']
+        with open(path, encoding="utf-8") as handle:
+            chars = [line.rstrip("\n") for line in handle]
+        return [""] + chars + [" "]
 
     def recognize(self, image_crop) -> str:
         if image_crop.size == 0:
@@ -59,7 +58,7 @@ class OpenVINOOCRRecognizer(BaseOCR):
             rec_in = self._preprocess(image_crop)
             rec_out = list(self.rec_model.infer_new_request({0: rec_in}).values())[0]
             text, conf = self._ctc_decode_with_conf(rec_out[0], self.char_list)
-            text = ' '.join(text.strip().split())
+            text = " ".join(text.strip().split())
             if text and conf >= self.confidence_threshold:
                 return text
             return self.NO_TEXT
@@ -87,10 +86,10 @@ class OpenVINOOCRRecognizer(BaseOCR):
         prev = -1
         for idx, score in zip(indices, best):
             idx = int(idx)
-            if idx != prev and idx != 0:
+            if idx not in (prev, 0):
                 result.append(char_list[idx])
                 confs.append(float(score))
             prev = idx
-        text = ''.join(result)
+        text = "".join(result)
         conf = float(np.mean(confs)) if confs else 0.0
         return text, conf

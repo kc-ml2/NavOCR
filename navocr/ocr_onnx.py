@@ -6,6 +6,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 import onnxruntime as ort
+import yaml
 
 from navocr.ocr_base import BaseOCR, ONNXOCRConfig
 
@@ -15,13 +16,13 @@ class ONNXOCRRecognizer(BaseOCR):
         super().__init__(config)
 
         if not self.config.model_path:
-            raise ValueError('ONNX OCR model path is required')
+            raise ValueError("ONNX OCR model path is required")
         if not Path(self.config.model_path).is_file():
-            raise FileNotFoundError(f'ONNX OCR model not found: {self.config.model_path}')
+            raise FileNotFoundError(f"ONNX OCR model not found: {self.config.model_path}")
         if not self.config.dict_path:
-            raise ValueError('ONNX OCR dictionary path is required')
+            raise ValueError("ONNX OCR dictionary path is required")
         if self.config.rec_h is None or self.config.rec_img_w is None or self.config.rec_max_w is None:
-            raise ValueError('ONNX OCR preprocessing dimensions are required')
+            raise ValueError("ONNX OCR preprocessing dimensions are required")
 
         providers = self._resolve_providers(self.config.device)
         self.session = ort.InferenceSession(self.config.model_path, providers=providers)
@@ -31,29 +32,27 @@ class ONNXOCRRecognizer(BaseOCR):
 
     @staticmethod
     def _resolve_providers(device: str | None) -> list[str]:
-        requested = (device or 'cpu').lower()
+        requested = (device or "cpu").lower()
         available = ort.get_available_providers()
-        if requested.startswith('cuda') and 'CUDAExecutionProvider' in available:
-            return ['CUDAExecutionProvider', 'CPUExecutionProvider']
-        return ['CPUExecutionProvider']
+        if requested.startswith("cuda") and "CUDAExecutionProvider" in available:
+            return ["CUDAExecutionProvider", "CPUExecutionProvider"]
+        return ["CPUExecutionProvider"]
 
     @staticmethod
     def _load_char_list(dict_path: str) -> list[str]:
         path = Path(dict_path)
         if not path.exists():
-            raise FileNotFoundError(f'Character dictionary not found: {dict_path}')
+            raise FileNotFoundError(f"Character dictionary not found: {dict_path}")
 
-        if path.suffix.lower() in ('.yml', '.yaml'):
-            import yaml
-
-            with open(path, encoding='utf-8') as handle:
+        if path.suffix.lower() in (".yml", ".yaml"):
+            with open(path, encoding="utf-8") as handle:
                 cfg = yaml.safe_load(handle)
-            chars = cfg['PostProcess']['character_dict']
-            return [''] + [str(char) for char in chars] + [' ']
+            chars = cfg["PostProcess"]["character_dict"]
+            return [""] + [str(char) for char in chars] + [" "]
 
-        with open(path, encoding='utf-8') as handle:
-            chars = [line.rstrip('\n') for line in handle]
-        return [''] + chars + [' ']
+        with open(path, encoding="utf-8") as handle:
+            chars = [line.rstrip("\n") for line in handle]
+        return [""] + chars + [" "]
 
     def recognize(self, image_crop) -> str:
         if image_crop.size == 0:
@@ -63,7 +62,7 @@ class ONNXOCRRecognizer(BaseOCR):
             rec_in = self._preprocess(image_crop)
             rec_out = self.session.run([self.output_name], {self.input_name: rec_in})[0]
             text, conf = self._ctc_decode_with_conf(rec_out[0], self.char_list)
-            text = ' '.join(text.strip().split())
+            text = " ".join(text.strip().split())
             if text and conf >= self.confidence_threshold:
                 return text
             return self.NO_TEXT
@@ -91,10 +90,10 @@ class ONNXOCRRecognizer(BaseOCR):
         prev = -1
         for idx, score in zip(indices, best):
             idx = int(idx)
-            if idx != prev and idx != 0:
+            if idx not in (0, prev):
                 result.append(char_list[idx])
                 confs.append(float(score))
             prev = idx
-        text = ''.join(result)
+        text = "".join(result)
         conf = float(np.mean(confs)) if confs else 0.0
         return text, conf

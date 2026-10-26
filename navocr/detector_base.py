@@ -4,24 +4,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
 
-@dataclass(frozen=True)
-class PPYOLOEPreprocessConfig:
-    target_size: tuple[int, int]
-    keep_ratio: bool
-    interp: int
-    pad_size: tuple[int, int]
-    fill_value: tuple[float, float, float]
-    mean: tuple[float, float, float]
-    std: tuple[float, float, float]
-    is_scale: bool
-
-
 @dataclass
 class DetectorConfig:
     backend: str | None = None
     model_path: str | None = None
     detector_config_path: str | None = None
-    class_names: dict[int, str] = field(default_factory=dict)    
+    class_names: dict[int, str] = field(default_factory=dict)
     detection_threshold: float = 0.5
     device: str | None = None
     output_dir: str = ""
@@ -29,6 +17,7 @@ class DetectorConfig:
     # Trainer.predict() still expects an output_dir at inference time, and the
     # same setting is also consumed as the runtime output directory in ROS and
     # standalone entry points.
+    preprocess: dict | None = None
 
 
 @dataclass
@@ -38,17 +27,17 @@ class PaddleDetectorConfig(DetectorConfig):
 
 @dataclass
 class OpenVINODetectorConfig(DetectorConfig):
-    preprocess: PPYOLOEPreprocessConfig | None = None
+    pass
 
 
 @dataclass
 class PyTorchDetectorConfig(DetectorConfig):
-    preprocess: PPYOLOEPreprocessConfig | None = None
+    pass
 
 
 @dataclass
 class ONNXDetectorConfig(DetectorConfig):
-    preprocess: PPYOLOEPreprocessConfig | None = None
+    pass
 
 
 class BaseDetector(ABC):
@@ -65,5 +54,5 @@ class BaseDetector(ABC):
     def infer(self, image_list):
         raise NotImplementedError
 
-    def infer_loaded_images(self, image_list):
+    def infer_loaded_images(self, image_list):  # pylint: disable=unused-argument
         return None

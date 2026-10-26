@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-import os
-import time
 from dataclasses import dataclass
 from datetime import datetime
+import os
+import time
 
-import cv2
-import rclpy
 from ament_index_python.packages import get_package_share_directory
+import cv2
 from cv_bridge import CvBridge
+import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from vision_msgs.msg import Detection2D, Detection2DArray, ObjectHypothesisWithPose
@@ -18,7 +18,7 @@ from vision_msgs.msg import Detection2D, Detection2DArray, ObjectHypothesisWithP
 from navocr.backend_factory import create_detector, create_ocr
 from navocr.config_loader import load_detector_config, load_ocr_config
 from navocr.ocr_base import BaseOCR
-from navocr.pipeline_utils import clip_bbox, draw_detection
+from navocr.utils import clip_bbox, draw_detection
 
 
 @dataclass
@@ -36,21 +36,22 @@ class ROSNodeConfig:
     annotated_font_scale: float
     annotated_thickness: int
 
+
 def get_navocr_share_dir() -> str:
-    return get_package_share_directory('navocr')
+    return get_package_share_directory("navocr")
 
 
 class NavOCRNode(Node):
     def __init__(self):
-        super().__init__('navocr_with_ocr_node')
+        super().__init__("navocr_with_ocr_node")
         self.node_config = self._declare_parameters()
         # Detector/OCR model settings are loaded from the shared params YAML so
         # the same configuration can be reused by both ROS and standalone entry points.
         self.detector_config = load_detector_config(self.node_config.params_file)
         self.ocr_config = load_ocr_config(self.node_config.params_file)
         self.bridge = CvBridge()
-        self.fallback_label = 'text'
-        self.ocr_fail_results = {BaseOCR.NO_TEXT, 'empty_crop', BaseOCR.ERROR}
+        self.fallback_label = "text"
+        self.ocr_fail_results = {BaseOCR.NO_TEXT, "empty_crop", BaseOCR.ERROR}
 
         self.total_processing_time = 0.0
         self.frame_count = 0
@@ -74,36 +75,36 @@ class NavOCRNode(Node):
         default_share = get_navocr_share_dir()
         # These parameters control ROS node runtime behavior.
         # Detector/OCR model settings are loaded separately from `params_file`.
-        self.declare_parameter('params_file', os.path.join(default_share, 'configs/navocr_onnx.params.yaml'))
-        self.declare_parameter('save_image', False)
-        self.declare_parameter('benchmark', False)
-        self.declare_parameter('session_name', '')
-        self.declare_parameter('image_topic', '/camera/infra1/image_rect_raw')
-        self.declare_parameter('detections_topic', '/navocr/detections')
-        self.declare_parameter('annotated_image_topic', '/navocr/annotated_image')
-        self.declare_parameter('queue_size', 10)
-        self.declare_parameter('temp_file_path', '/tmp/navocr_temp_frame.jpg')
-        self.declare_parameter('image_save_interval', 10)
-        self.declare_parameter('annotated_font_scale', 1.2)
-        self.declare_parameter('annotated_thickness', 2)
+        self.declare_parameter("params_file", os.path.join(default_share, "configs/navocr_onnx.params.yaml"))
+        self.declare_parameter("save_image", False)
+        self.declare_parameter("benchmark", False)
+        self.declare_parameter("session_name", "")
+        self.declare_parameter("image_topic", "/camera/infra1/image_rect_raw")
+        self.declare_parameter("detections_topic", "/navocr/detections")
+        self.declare_parameter("annotated_image_topic", "/navocr/annotated_image")
+        self.declare_parameter("queue_size", 10)
+        self.declare_parameter("temp_file_path", "/tmp/navocr_temp_frame.jpg")
+        self.declare_parameter("image_save_interval", 10)
+        self.declare_parameter("annotated_font_scale", 1.2)
+        self.declare_parameter("annotated_thickness", 2)
 
-        session_name = self.get_parameter('session_name').value
+        session_name = self.get_parameter("session_name").value
         if not session_name:
-            session_name = datetime.now().strftime('%Y%m%d_%H%M%S')
+            session_name = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         return ROSNodeConfig(
-            params_file=self.get_parameter('params_file').value,
-            save_image=bool(self.get_parameter('save_image').value),
-            benchmark=bool(self.get_parameter('benchmark').value),
+            params_file=self.get_parameter("params_file").value,
+            save_image=bool(self.get_parameter("save_image").value),
+            benchmark=bool(self.get_parameter("benchmark").value),
             session_name=session_name,
-            image_topic=self.get_parameter('image_topic').value,
-            detections_topic=self.get_parameter('detections_topic').value,
-            annotated_image_topic=self.get_parameter('annotated_image_topic').value,
-            queue_size=int(self.get_parameter('queue_size').value),
-            temp_file_path=self.get_parameter('temp_file_path').value,
-            image_save_interval=int(self.get_parameter('image_save_interval').value),
-            annotated_font_scale=float(self.get_parameter('annotated_font_scale').value),
-            annotated_thickness=int(self.get_parameter('annotated_thickness').value),
+            image_topic=self.get_parameter("image_topic").value,
+            detections_topic=self.get_parameter("detections_topic").value,
+            annotated_image_topic=self.get_parameter("annotated_image_topic").value,
+            queue_size=int(self.get_parameter("queue_size").value),
+            temp_file_path=self.get_parameter("temp_file_path").value,
+            image_save_interval=int(self.get_parameter("image_save_interval").value),
+            annotated_font_scale=float(self.get_parameter("annotated_font_scale").value),
+            annotated_thickness=int(self.get_parameter("annotated_thickness").value),
         )
 
     def _create_ros_io(self) -> None:
@@ -125,18 +126,18 @@ class NavOCRNode(Node):
         )
 
     def _log_startup(self) -> None:
-        self.get_logger().info(f'Session name: {self.node_config.session_name}')
-        self.get_logger().info(f'Params file: {self.node_config.params_file}')
-        self.get_logger().info(f'Detector backend: {self.detector_config.backend}')
-        self.get_logger().info(f'OCR backend: {self.ocr_config.backend}')
+        self.get_logger().info(f"Session name: {self.node_config.session_name}")
+        self.get_logger().info(f"Params file: {self.node_config.params_file}")
+        self.get_logger().info(f"Detector backend: {self.detector_config.backend}")
+        self.get_logger().info(f"OCR backend: {self.ocr_config.backend}")
         self.get_logger().info(f'Detector device: {self.detector_config.device or "auto"}')
         self.get_logger().info(f'OCR device: {self.ocr_config.device or "auto"}')
-        self.get_logger().info(f'Detector threshold: {self.detector_config.detection_threshold}')
-        self.get_logger().info(f'OCR threshold: {self.ocr_config.confidence_threshold}')
-        self.get_logger().info(f'Output directory: {self.detector_config.output_dir}')
-        self.get_logger().info(f'Subscribing to: {self.node_config.image_topic}')
-        self.get_logger().info(f'Publishing detections to: {self.node_config.detections_topic}')
-        self.get_logger().info(f'Publishing annotated image to: {self.node_config.annotated_image_topic}')
+        self.get_logger().info(f"Detector threshold: {self.detector_config.detection_threshold}")
+        self.get_logger().info(f"OCR threshold: {self.ocr_config.confidence_threshold}")
+        self.get_logger().info(f"Output directory: {self.detector_config.output_dir}")
+        self.get_logger().info(f"Subscribing to: {self.node_config.image_topic}")
+        self.get_logger().info(f"Publishing detections to: {self.node_config.detections_topic}")
+        self.get_logger().info(f"Publishing annotated image to: {self.node_config.annotated_image_topic}")
 
     def image_callback(self, msg) -> None:
         frame_start_time = time.time()
@@ -144,9 +145,9 @@ class NavOCRNode(Node):
             self.wall_clock_start = frame_start_time
 
         try:
-            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
         except Exception as exc:
-            self.get_logger().error(f'cv_bridge conversion failed: {exc}')
+            self.get_logger().error(f"cv_bridge conversion failed: {exc}")
             return
 
         detection_start = time.time()
@@ -161,8 +162,8 @@ class NavOCRNode(Node):
         detection_array.header = msg.header
         frame_ocr_time = 0.0
 
-        if results and 'bbox' in results[0]:
-            for bbox in results[0]['bbox']:
+        if results and "bbox" in results[0]:
+            for bbox in results[0]["bbox"]:
                 _cls_id, score, x1, y1, x2, y2 = bbox
                 if float(score) < self.detector_config.detection_threshold:
                     continue
@@ -173,23 +174,29 @@ class NavOCRNode(Node):
 
                 if ocr_text in self.ocr_fail_results:
                     draw_detection(
-                        annotated_image, x1, y1, x2, y2, self.fallback_label,
+                        annotated_image,
+                        x1,
+                        y1,
+                        x2,
+                        y2,
+                        self.fallback_label,
                         font_scale=self.node_config.annotated_font_scale,
                         font_thickness=self.node_config.annotated_thickness,
                     )
                     continue
 
                 draw_detection(
-                    annotated_image, x1, y1, x2, y2, ocr_text,
+                    annotated_image,
+                    x1,
+                    y1,
+                    x2,
+                    y2,
+                    ocr_text,
                     font_scale=self.node_config.annotated_font_scale,
                     font_thickness=self.node_config.annotated_thickness,
                 )
-                detection_array.detections.append(
-                    self._build_detection(msg.header, x1, y1, x2, y2, ocr_text, score)
-                )
-                self.get_logger().info(
-                    f"Detection: '{ocr_text}' conf={float(score):.2f} bbox=({x1},{y1},{x2},{y2})"
-                )
+                detection_array.detections.append(self._build_detection(msg.header, x1, y1, x2, y2, ocr_text, score))
+                self.get_logger().info(f"Detection: '{ocr_text}' conf={float(score):.2f} bbox=({x1},{y1},{x2},{y2})")
 
         self.detection_pub.publish(detection_array)
         self._publish_annotated_image(msg.header, annotated_image)
@@ -215,7 +222,9 @@ class NavOCRNode(Node):
         ocr_text = self.ocr.recognize(cropped_image)
         return ocr_text, frame_ocr_time + (time.time() - ocr_start)
 
-    def _build_detection(self, header, x1: int, y1: int, x2: int, y2: int, ocr_text: str, score: float) -> Detection2D:
+    def _build_detection(  # pylint: disable=too-many-positional-arguments
+        self, header, x1: int, y1: int, x2: int, y2: int, ocr_text: str, score: float
+    ) -> Detection2D:
         detection = Detection2D()
         detection.header = header
         detection.bbox.center.position.x = float((x1 + x2) / 2.0)
@@ -231,11 +240,11 @@ class NavOCRNode(Node):
 
     def _publish_annotated_image(self, header, annotated_image) -> None:
         try:
-            annotated_msg = self.bridge.cv2_to_imgmsg(annotated_image, encoding='bgr8')
+            annotated_msg = self.bridge.cv2_to_imgmsg(annotated_image, encoding="bgr8")
             annotated_msg.header = header
             self.annotated_image_pub.publish(annotated_msg)
         except Exception as exc:
-            self.get_logger().error(f'Failed to publish annotated image: {exc}')
+            self.get_logger().error(f"Failed to publish annotated image: {exc}")
 
     def _update_performance_stats(
         self,
@@ -268,12 +277,12 @@ class NavOCRNode(Node):
         if self.frame_id % self.node_config.image_save_interval != 0:
             return
 
-        filename = os.path.join(self.detector_config.output_dir, f'frame_{self.frame_id:06d}.png')
+        filename = os.path.join(self.detector_config.output_dir, f"frame_{self.frame_id:06d}.png")
         cv2.imwrite(filename, annotated_image)
         avg_time = self.total_processing_time / self.frame_count
         self.get_logger().info(
-            f'Frame {self.frame_id}: {detection_count} detections | Det: {detection_time:.3f}s | '
-            f'OCR: {frame_ocr_time:.3f}s | Total: {total_time:.3f}s | Avg: {avg_time:.3f}s'
+            f"Frame {self.frame_id}: {detection_count} detections | Det: {detection_time:.3f}s | "
+            f"OCR: {frame_ocr_time:.3f}s | Total: {total_time:.3f}s | Avg: {avg_time:.3f}s"
         )
 
     def destroy_node(self):
@@ -296,17 +305,17 @@ class NavOCRNode(Node):
             wall_clock_elapsed = self.wall_clock_end - self.wall_clock_start
         throughput_fps = self.frame_count / wall_clock_elapsed if wall_clock_elapsed > 0 else 0.0
 
-        self.get_logger().info('=' * 60)
-        self.get_logger().info('NavOCR Final Statistics:')
-        self.get_logger().info(f'  Total frames processed: {self.frame_count}')
-        self.get_logger().info(f'  Total detections: {self.detection_count}')
-        self.get_logger().info(f'  Avg detections/frame: {avg_detections:.2f}')
-        self.get_logger().info(f'  Avg detection time: {avg_detection:.3f}s')
-        self.get_logger().info(f'  Avg OCR time: {avg_ocr:.3f}s')
-        self.get_logger().info(f'  Avg processing time per frame: {avg_time:.3f}s')
-        self.get_logger().info(f'  Wall clock elapsed: {wall_clock_elapsed:.2f}s')
-        self.get_logger().info(f'  Throughput FPS: {throughput_fps:.2f}')
-        self.get_logger().info('=' * 60)
+        self.get_logger().info("=" * 60)
+        self.get_logger().info("NavOCR Final Statistics:")
+        self.get_logger().info(f"  Total frames processed: {self.frame_count}")
+        self.get_logger().info(f"  Total detections: {self.detection_count}")
+        self.get_logger().info(f"  Avg detections/frame: {avg_detections:.2f}")
+        self.get_logger().info(f"  Avg detection time: {avg_detection:.3f}s")
+        self.get_logger().info(f"  Avg OCR time: {avg_ocr:.3f}s")
+        self.get_logger().info(f"  Avg processing time per frame: {avg_time:.3f}s")
+        self.get_logger().info(f"  Wall clock elapsed: {wall_clock_elapsed:.2f}s")
+        self.get_logger().info(f"  Throughput FPS: {throughput_fps:.2f}")
+        self.get_logger().info("=" * 60)
 
     def _write_timing_file(self) -> None:
         avg_time = self.total_processing_time / self.frame_count
@@ -318,23 +327,23 @@ class NavOCRNode(Node):
             wall_clock_elapsed = self.wall_clock_end - self.wall_clock_start
         throughput_fps = self.frame_count / wall_clock_elapsed if wall_clock_elapsed > 0 else 0.0
 
-        timing_file = os.path.join(self.detector_config.output_dir, f'{self.node_config.session_name}_timing.txt')
+        timing_file = os.path.join(self.detector_config.output_dir, f"{self.node_config.session_name}_timing.txt")
         try:
-            with open(timing_file, 'w', encoding='utf-8') as handle:
-                handle.write('=== NavOCR Timing Statistics ===\n')
-                handle.write(f'Session: {self.node_config.session_name}\n\n')
-                handle.write(f'Total frames processed: {self.frame_count}\n')
-                handle.write(f'Total detections: {self.detection_count}\n')
-                handle.write(f'Avg detections/frame: {avg_detections:.2f}\n\n')
-                handle.write(f'Total processing time: {self.total_processing_time:.3f}s\n')
-                handle.write(f'Avg detection time: {avg_detection:.3f}s\n')
-                handle.write(f'Avg OCR time: {avg_ocr:.3f}s\n')
-                handle.write(f'Avg processing time per frame: {avg_time:.3f}s\n')
-                handle.write(f'Wall clock elapsed: {wall_clock_elapsed:.2f}s\n')
-                handle.write(f'Throughput FPS: {throughput_fps:.2f}\n')
-            self.get_logger().info(f'Timing statistics saved to: {timing_file}')
+            with open(timing_file, "w", encoding="utf-8") as handle:
+                handle.write("=== NavOCR Timing Statistics ===\n")
+                handle.write(f"Session: {self.node_config.session_name}\n\n")
+                handle.write(f"Total frames processed: {self.frame_count}\n")
+                handle.write(f"Total detections: {self.detection_count}\n")
+                handle.write(f"Avg detections/frame: {avg_detections:.2f}\n\n")
+                handle.write(f"Total processing time: {self.total_processing_time:.3f}s\n")
+                handle.write(f"Avg detection time: {avg_detection:.3f}s\n")
+                handle.write(f"Avg OCR time: {avg_ocr:.3f}s\n")
+                handle.write(f"Avg processing time per frame: {avg_time:.3f}s\n")
+                handle.write(f"Wall clock elapsed: {wall_clock_elapsed:.2f}s\n")
+                handle.write(f"Throughput FPS: {throughput_fps:.2f}\n")
+            self.get_logger().info(f"Timing statistics saved to: {timing_file}")
         except Exception as exc:
-            self.get_logger().error(f'Failed to save timing statistics: {exc}')
+            self.get_logger().error(f"Failed to save timing statistics: {exc}")
 
 
 def main():
@@ -345,9 +354,9 @@ def main():
         node = NavOCRNode()
         rclpy.spin(node)
     except KeyboardInterrupt:
-        print('\nShutting down NavOCR with OCR node...')
+        print("\nShutting down NavOCR with OCR node...")
     except Exception as exc:
-        print(f'Error: {exc}')
+        print(f"Error: {exc}")
     finally:
         if node is not None:
             node.destroy_node()
@@ -355,5 +364,5 @@ def main():
             rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
