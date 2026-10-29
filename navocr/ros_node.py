@@ -169,20 +169,28 @@ class NavOCRNode(Node):
                     continue
 
                 x1, y1, x2, y2 = clip_bbox(cv_image, x1, y1, x2, y2)
-                cropped_image = cv_image[y1:y2, x1:x2]
-                ocr_text, frame_ocr_time = self._recognize_text(cropped_image, frame_ocr_time)
 
-                if ocr_text in self.ocr_fail_results:
-                    draw_detection(
-                        annotated_image,
-                        x1,
-                        y1,
-                        x2,
-                        y2,
-                        self.fallback_label,
-                        font_scale=self.node_config.annotated_font_scale,
-                        font_thickness=self.node_config.annotated_thickness,
-                    )
+                if int(_cls_id) == 0:
+                    cropped_image = cv_image[y1:y2, x1:x2]
+                    ocr_text, frame_ocr_time = self._recognize_text(cropped_image, frame_ocr_time)
+
+                    if ocr_text in self.ocr_fail_results:
+                        draw_detection(
+                            annotated_image,
+                            x1,
+                            y1,
+                            x2,
+                            y2,
+                            self.fallback_label,
+                            font_scale=self.node_config.annotated_font_scale,
+                            font_thickness=self.node_config.annotated_thickness,
+                        )
+                        continue
+
+                elif int(_cls_id) == 1:
+                    ocr_text = 'directional_guide'
+
+                else:
                     continue
 
                 draw_detection(
