@@ -1,7 +1,7 @@
 # NavOCR
 
 <p align="center">
-    <img src="./NavOCR_ML2.png" alt="NavOCR_logo"
+    <img src="./NavOCR_ML2.png" alt="NavOCR_logo"/>
 </p>
 A lightweight, navigation-oriented OCR framework.
 
@@ -9,7 +9,7 @@ It is designed for robotic navigation scenarios, where only navigation-relevant 
 
 - Signboards
 - Room numbers
-- (coming soon) Directional signs
+- Directional guides
 
 while irrelevant text, such as advertisements or price tags, is ignored.  
 If you'd like to see an example of SLAM using NavOCR, check it out our [TextMap examples](https://github.com/kc-ml2/TextMap_Examples).
@@ -20,12 +20,13 @@ If you'd like to see an example of SLAM using NavOCR, check it out our [TextMap 
 
 - Focuses on navigation-relevant text to reduce unnecessary information and improve OCR speed
 - Supports both standalone and ROS 2 integration
-- Optimized for CPU-first robotic platforms, achieving ~6 FPS on CPUs
+- Optimized for CPU-first robotic platforms
 - Supports PaddlePaddle for GPU environments
+- Detects signboard text and directional guides
 
 
 <p align="center">
-    <img src="./example.svg" alt="NavOCR_example"
+    <img src="./example.svg" alt="NavOCR_example"/>
 </p>
 
 <p align="center">
@@ -40,23 +41,23 @@ If you'd like to see an example of SLAM using NavOCR, check it out our [TextMap 
 - `configs/navocr_onnx.params.yaml`: ONNX detector + ONNX OCR config (default)
 - `configs/navocr_openvino.params.yaml`: OpenVINO detector + OpenVINO OCR config
 - `configs/navocr_paddle.params.yaml`: PaddleDetection detector + Paddle OCR config
-- `configs/navocr_pytorch.params.yaml`: PyTorch detector + Paddle OCR config
+- `configs/navocr_pytorch.params.yaml`: PyTorch detector + PyTorch OCR config
 
 ## Backend Composition
 
 | Model format | Runtime / engine | Hardware  | Text detection | Text recognition | FPS |
 | ------------ | ---------------- | --------- | -------------- | ---------------- | --- |
-| ONNX         | ONNX Runtime     | CPU / GPU | [RT-DETRv4](https://github.com/RT-DETRs/RT-DETRv4) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | 4.51 |
-| OpenVINO IR  | OpenVINO Runtime | Intel CPU | [RT-DETRv4](https://github.com/RT-DETRs/RT-DETRv4) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | 6.07 |
-| Paddle model | Paddle Inference | CPU / GPU | [PP-YOLOE](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.9/configs/ppyoloe/README.md) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | 1.79 |
-| PyTorch      | PyTorch          | CPU / GPU | [RT-DETRv4](https://github.com/RT-DETRs/RT-DETRv4) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | 2.05 |
+| ONNX         | ONNX Runtime     | CPU / GPU | [PP-YOLOE](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.9/configs/ppyoloe/README.md) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | TBD |
+| OpenVINO IR  | OpenVINO Runtime | Intel CPU | [PP-YOLOE](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.9/configs/ppyoloe/README.md) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | TBD |
+| Paddle model | Paddle Inference | CPU / GPU | [PP-YOLOE](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.9/configs/ppyoloe/README.md) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | TBD |
+| PyTorch      | PyTorch          | CPU / GPU | [PP-YOLOE](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.9/configs/ppyoloe/README.md) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | TBD |
 
-*All FPS was measured on 11th Gen Intel(R) Core(TM) i5-1135G7.
+*FPS benchmarks for the updated models are pending.*
 
 ## Installation
 
 ### Download Model
-ONNX, OpenVINO, PaddlePaddle models are included in this repository.
+ONNX, OpenVINO, PaddlePaddle and PyTorch models are included in this repository.
 
 ```bash
 git clone git@github.com:kc-ml2/NavOCR.git
@@ -91,14 +92,9 @@ pip install openvino pyyaml opencv-python numpy
 ### For PyTorch runtime (Optional)
 
 ```bash
-pip install pyyaml opencv-python numpy
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-
-# Download weight
-pip install gdown==5.2.0
-gdown https://drive.google.com/uc?id=1D0zRUmyPvxgXq2rytrzVqg3-5_-5gkDn
-mv rtv4_hgnetv2_s.pth model/pytorch/rtv4_hgnetv2_s.pth
+pip install torch pyyaml opencv-python numpy
 ```
+
 
 ### For Paddle runtime (Optional)
 
@@ -150,10 +146,6 @@ python navocr_standalone.py \
 
 ### Run with OpenVINO runtime
 ```bash
-# If you encounter oneDNN compatibility issues on CPU, set these before running:
-export FLAGS_enable_pir_api=0
-export FLAGS_enable_pir_in_executor=0
-
 python navocr_standalone.py \
   --params-file configs/navocr_openvino.params.yaml \
   --infer_dir data/example_sequence/images
@@ -222,10 +214,11 @@ Published topics:
 - `detections_topic` default: `/navocr/detections`
 - `annotated_image_topic` default: `/navocr/annotated_image`
 
+The ROS 2 node publishes OCR text for signboards and labels directional guides as `directional_guide` without running OCR on them.
+
 ## Acknowledgements
 
 We gratefully acknowledge the open-source projects that made this work possible:
-[RT-DETRv4](https://github.com/RT-DETRs/RT-DETRv4),
 [PaddleDetection](https://github.com/PaddlePaddle/PaddleDetection),
 [PaddleOCR / PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR),
 [OpenVINO](https://github.com/openvinotoolkit/openvino), and
@@ -240,14 +233,14 @@ Stay tuned for upcoming features for broader navigation use cases.
 - [x] Alternative inference for higher FPS on CPU (Add `OpenVINO` support)
 - [x] Integration with text recognition (PaddleOCR)
 - [x] Integration with SLAM packages via ROS (TextMap)
+- [x] Directional guide detection
 - [ ] Model training scripts (Dataset crawling, model fine-tuning, ...)
 - [ ] Floor sign detection
-- [ ] Directional guide text detection
+
 
 ## License
 This repository is licensed under the Apache License, Version 2.0.
 
 This project includes code and configuration files derived from
-PaddleDetection (https://github.com/PaddlePaddle/PaddleDetection) and
-RT-DETRv4 (https://github.com/RT-DETRs/RT-DETRv4),
+PaddleDetection (https://github.com/PaddlePaddle/PaddleDetection), 
 which are also licensed under the Apache License, Version 2.0.

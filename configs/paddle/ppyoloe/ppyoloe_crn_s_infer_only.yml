@@ -14,8 +14,29 @@ depth_mult: 0.33
 width_mult: 0.50
 
 # ====== My dataset override ======
-num_classes: 1
+num_classes: 2
 
 TestDataset:
   dataset_dir: configs/paddle/datasets/metadata
   anno_path: annotations/instances_test.json
+
+TestReader:
+  sample_transforms:
+    - Decode: {}
+    - Resize:
+        target_size: [640, 640]
+        keep_ratio: true
+        interp: 2
+    - Pad:
+        size: [640, 640]
+        pad_mode: 0
+        fill_value: [123.675, 116.28, 103.53]
+    - NormalizeImage:
+        mean: [0.485, 0.456, 0.406]
+        std: [0.229, 0.224, 0.225]
+        is_scale: true
+    - Permute: {}
+
+PPYOLOEHead:
+  nms:
+    score_threshold: 0.01
