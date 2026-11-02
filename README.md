@@ -45,6 +45,11 @@ If you'd like to see an example of SLAM using NavOCR, check it out our [TextMap 
 
 ## Backend Composition
 
+NavOCR includes ready-to-use detection and text recognition models for ONNX Runtime, OpenVINO, PyTorch, and PaddlePaddle.
+- Each backend can run the full OCR pipeline independently.
+
+Install the dependencies for your preferred backend and select its configuration file to get started—no model conversion is required.
+
 | Model format | Runtime / engine | Hardware  | Text detection | Text recognition | FPS |
 | ------------ | ---------------- | --------- | -------------- | ---------------- | --- |
 | ONNX         | ONNX Runtime     | CPU / GPU | [PP-YOLOE](https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.9/configs/ppyoloe/README.md) (Fine-tuned) | [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) | TBD |
