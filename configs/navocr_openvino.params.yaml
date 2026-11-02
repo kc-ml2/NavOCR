@@ -2,10 +2,10 @@
   ros__parameters:
     # Detector settings shared by ROS and standalone entry points.
     detector_backend: openvino
-    detector_model_path: model/openvino/rtv4_hgnetv2_s.xml
+    detector_model_path: model/openvino/navocr.xml
     detector_threshold: 0.5
     detector_device: "CPU"
-    detector_imgsz: 640
+    detector_config_path: configs/paddle/ppyoloe/ppyoloe_crn_s_infer_only.yml
 
     # OCR settings shared by ROS and standalone entry points.
     ocr_backend: openvino

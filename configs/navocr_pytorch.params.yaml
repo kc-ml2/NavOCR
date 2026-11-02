@@ -2,17 +2,21 @@
   ros__parameters:
     # Detector settings shared by ROS and standalone entry points.
     detector_backend: pytorch
-    detector_model_path: model/pytorch/rtv4_hgnetv2_s.pth
-    detector_pytorch_config_path: model/pytorch/rtv4_hgnetv2_s/rtv4/rtv4_hgnetv2_s_coco.yml
-    detector_threshold: 0.4
+    detector_model_path: model/pytorch/navocr.pt
+    detector_threshold: 0.5
     detector_device: "cpu"  # or "cuda"
-    detector_imgsz: 640
+    detector_config_path: configs/paddle/ppyoloe/ppyoloe_crn_s_infer_only.yml
 
     # OCR settings shared by ROS and standalone entry points.
-    ocr_backend: paddle
+    ocr_backend: pytorch
+    ocr_model_path: model/pytorch/PP-OCRv5_mobile_rec_infer.pt
+    ocr_dict_path: model/paddle/PP-OCRv5_mobile_rec_infer/inference.yml
     ocr_threshold: 0.6
-    ocr_device: "cpu"  # or "gpu"
+    ocr_device: "cpu"  # or "cuda"
     ocr_max_resize: 800
+    ocr_rec_h: 48
+    ocr_rec_img_w: 320
+    ocr_rec_max_w: 3200
     ocr_language: en
 
     # Shared output settings used by both ROS and standalone entry points.

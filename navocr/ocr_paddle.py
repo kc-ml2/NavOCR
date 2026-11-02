@@ -15,31 +15,31 @@ class PaddleOCRRecognizer(BaseOCR):
     def _create_ocr(self, text_recognition_cls):
         kwargs = {}
         if self.config.model_path:
-            kwargs['model_dir'] = self.config.model_path
+            kwargs["model_dir"] = self.config.model_path
         else:
-            kwargs['model_name'] = self._resolve_recognition_model_name(self.config.language)
+            kwargs["model_name"] = self._resolve_recognition_model_name(self.config.language)
         if self.config.device:
-            kwargs['device'] = str(self.config.device).lower()
+            kwargs["device"] = str(self.config.device).lower()
         return text_recognition_cls(**kwargs)
 
     @staticmethod
-    def _resolve_recognition_model_name(language: str | None) -> str:
-        lang = (language or 'en').lower()
-        if lang in {'ch', 'chinese_cht', 'japan'}:
-            return 'PP-OCRv5_server_rec'
-        if lang == 'en':
-            return 'en_PP-OCRv5_mobile_rec'
-        if lang == 'korean':
-            return 'korean_PP-OCRv5_mobile_rec'
-        if lang == 'th':
-            return 'th_PP-OCRv5_mobile_rec'
-        if lang == 'el':
-            return 'el_PP-OCRv5_mobile_rec'
-        if lang == 'te':
-            return 'te_PP-OCRv5_mobile_rec'
-        if lang == 'ta':
-            return 'ta_PP-OCRv5_mobile_rec'
-        return 'latin_PP-OCRv5_mobile_rec'
+    def _resolve_recognition_model_name(language: str | None) -> str:  # pylint: disable=too-many-return-statements
+        lang = (language or "en").lower()
+        if lang in {"ch", "chinese_cht", "japan"}:
+            return "PP-OCRv5_server_rec"
+        if lang == "en":
+            return "en_PP-OCRv5_mobile_rec"
+        if lang == "korean":
+            return "korean_PP-OCRv5_mobile_rec"
+        if lang == "th":
+            return "th_PP-OCRv5_mobile_rec"
+        if lang == "el":
+            return "el_PP-OCRv5_mobile_rec"
+        if lang == "te":
+            return "te_PP-OCRv5_mobile_rec"
+        if lang == "ta":
+            return "ta_PP-OCRv5_mobile_rec"
+        return "latin_PP-OCRv5_mobile_rec"
 
     def recognize(self, image_crop) -> str:
         if image_crop.size == 0:
@@ -66,11 +66,11 @@ class PaddleOCRRecognizer(BaseOCR):
             return None
 
         result = results[0]
-        if isinstance(result, dict) and 'rec_text' in result and 'rec_score' in result:
-            return self._join_texts(result['rec_text'], result['rec_score'])
+        if isinstance(result, dict) and "rec_text" in result and "rec_score" in result:
+            return self._join_texts(result["rec_text"], result["rec_score"])
 
-        if isinstance(result, dict) and 'rec_texts' in result and 'rec_scores' in result:
-            return self._join_texts(result['rec_texts'], result['rec_scores'])
+        if isinstance(result, dict) and "rec_texts" in result and "rec_scores" in result:
+            return self._join_texts(result["rec_texts"], result["rec_scores"])
 
         if isinstance(result, list) and len(result) > 0:
             texts = []
@@ -81,7 +81,7 @@ class PaddleOCRRecognizer(BaseOCR):
                     if conf > self.confidence_threshold and text:
                         texts.append(text)
             if texts:
-                return ' '.join(' '.join(texts).split())
+                return " ".join(" ".join(texts).split())
 
         return None
 
@@ -98,5 +98,5 @@ class PaddleOCRRecognizer(BaseOCR):
                 if text:
                     picked.append(text)
         if picked:
-            return ' '.join(' '.join(picked).split())
+            return " ".join(" ".join(picked).split())
         return None

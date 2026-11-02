@@ -25,7 +25,11 @@
   "categories": [
     {
       "id": 1,
-      "name": "navigation-oriented-text"
+      "name": "signboard_text"
+    },
+    {
+      "id": 2,
+      "name": "directional_guide"
     }
   ]
 }
