@@ -63,6 +63,8 @@ OCR and LLM run on an NVIDIA GPU. Qwen3.5-9B fits on a 24 GB GPU;
 Qwen3.5-35B-A3B needs an 80 GB GPU.
 
 ```bash
+cd NeurIPS2026
+
 conda create -n navocr-ocr python=3.10 -y
 conda activate navocr-ocr
 pip install -e ".[ocr]" --extra-index-url https://www.paddlepaddle.org.cn/packages/stable/cu118/
@@ -103,32 +105,32 @@ All rows are scored against the second field. The NavOCR generator matches OCR
 strings against the third and fourth fields (similarity ≥ 0.5). The LLM never
 sees them.
 
-**Run.** [`dataset_quality.py`](dataset_quality.py)
+**Run.** [`run_dataset_quality.py`](run_dataset_quality.py)
 
 ```bash
 # 1. OCR (conda activate navocr-ocr)
 #    Reads every image with PP-OCRv5.
 #    Output: out/dataset-quality/ocr_cache.jsonl (OCR strings per image)
-python dataset_quality.py ocr --image-dir data/text_selection_benchmark/images \
+python run_dataset_quality.py ocr --image-dir data/text_selection_benchmark/images \
     --gt-file data/text_selection_benchmark/text_string_label.txt --out-dir out/dataset-quality
 
 # 2. LLM filter (conda activate navocr-llm)
 #    The LLM picks the place names from each image's OCR strings.
 #    One model load runs all six prompts.
 #    Output: out/dataset-quality/sel.Qwen3.5-9B.p1.jsonl ... p6.jsonl
-python dataset_quality.py filter --out-dir out/dataset-quality \
+python run_dataset_quality.py filter --out-dir out/dataset-quality \
     --model Qwen/Qwen3.5-9B --prompts p1,p2,p3,p4,p5,p6 --batch-size 8
 
 # 3. Score (navocr-llm)
 #    Compares each selection with the hand-written labels.
 #    Also scores the Unfiltered OCR row.
 #    Output: out/dataset-quality/report.<model>.<prompt>.json (F1, precision, recall)
-python dataset_quality.py score --out-dir out/dataset-quality \
+python run_dataset_quality.py score --out-dir out/dataset-quality \
     --gt-file data/text_selection_benchmark/text_string_label.txt
 
 # 4. Table (navocr-llm)
 #    Prints the Table 1 rows from the reports.
-python dataset_quality.py table --out-dir out/dataset-quality
+python run_dataset_quality.py table --out-dir out/dataset-quality
 ```
 
 For Qwen3.5-35B-A3B, repeat step 2 with `--model Qwen/Qwen3.5-35B-A3B`, then
@@ -142,32 +144,32 @@ images.
 **Data.** `data/detection_benchmark`: 1,554 images, 1,695 hand-drawn boxes in
 `instances_test.json` (COCO, one category).
 
-**Run.** [`detection.py`](detection.py)
+**Run.** [`run_benchmark_detection.py`](run_benchmark_detection.py)
 
 ```bash
 # 1. Manifest (conda activate navocr-ocr)
 #    Fixes the image list and gives each image an id.
 #    Output: out/detection/manifest.json
-python detection.py manifest --images data/detection_benchmark/images \
+python run_benchmark_detection.py manifest --images data/detection_benchmark/images \
     --out out/detection/manifest.json
 
 # 2. OCR (navocr-ocr)
 #    PP-OCRv5 finds every text box and reads it.
 #    Output: out/detection/ocr.jsonl (boxes, strings, confidences, OCR time per image)
-python detection.py ocr --manifest out/detection/manifest.json \
+python run_benchmark_detection.py ocr --manifest out/detection/manifest.json \
     --images data/detection_benchmark/images --out out/detection/ocr.jsonl
 
 # 3. LLM filter (conda activate navocr-llm), once per model and prompt
 #    The LLM keeps the strings that name a place.
 #    Output: out/detection/Qwen3.5-9B.p3.jsonl (kept strings, LLM time per image)
-python detection.py filter --ocr out/detection/ocr.jsonl --model Qwen/Qwen3.5-9B \
+python run_benchmark_detection.py filter --ocr out/detection/ocr.jsonl --model Qwen/Qwen3.5-9B \
     --prompt p3 --batch-size 8 --out out/detection/Qwen3.5-9B.p3.jsonl
 
 # 4. AP (navocr-llm)
 #    Keeps the boxes of the kept strings and scores them against the hand-drawn
 #    boxes at IoU 0.25 and 0.50. Takes any number of filter outputs.
 #    Output: out/detection/report.ap.json
-python detection.py ap --manifest out/detection/manifest.json \
+python run_benchmark_detection.py ap --manifest out/detection/manifest.json \
     --gt data/detection_benchmark/instances_test.json \
     --ocr out/detection/ocr.jsonl --pred out/detection/Qwen3.5-*.jsonl \
     --out out/detection/report.ap.json
@@ -175,13 +177,13 @@ python detection.py ap --manifest out/detection/manifest.json \
 # 5. FPS (navocr-llm)
 #    1 / (mean OCR time + mean LLM time).
 #    Output: out/detection/fps.Qwen3.5-9B.p3.json
-python detection.py fps --manifest out/detection/manifest.json \
+python run_benchmark_detection.py fps --manifest out/detection/manifest.json \
     --ocr out/detection/ocr.jsonl --filtered out/detection/Qwen3.5-9B.p3.jsonl \
     --out out/detection/fps.Qwen3.5-9B.p3.json
 ```
 
-[`compare_ap_pycocotools.py`](compare_ap_pycocotools.py) recomputes AP with
-pycocotools as a cross-check.
+[`compare_ap_pycocotools.py`](navocr_bench/compare_ap_pycocotools.py) recomputes AP with
+pycocotools as a cross-check (`python -m navocr_bench.compare_ap_pycocotools`).
 
 ## Prompts
 

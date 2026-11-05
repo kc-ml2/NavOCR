@@ -1,12 +1,12 @@
-#!/usr/bin/env python3
-"""Recompute `detection.py ap` with pycocotools on the same predictions.
+"""Recompute `run_benchmark_detection.py ap` with pycocotools on the same predictions.
 
 detect_eval integrates the precision-recall curve exactly; pycocotools samples
 101 recall points. Both use the same images, one class, no detection cap, no
 area filter. Runs on CPU.
 
-    python compare_ap_pycocotools.py --manifest out/manifest.test.json \
-        --gt instances_test.json --ocr out/ocr.test.jsonl --pred out/q35-*.jsonl
+    python -m navocr_bench.compare_ap_pycocotools --manifest out/detection/manifest.json \
+        --gt data/detection_benchmark/instances_test.json --ocr out/detection/ocr.jsonl \
+        --pred out/detection/Qwen3.5-*.jsonl
 """
 from __future__ import annotations
 
@@ -20,9 +20,15 @@ import numpy as np
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 
-from navocr_bench.cli import boxed_results, scored_ground_truth
 from navocr_bench.ocr import read_dump
-from navocr_bench.detect_eval import IOU_THRESHOLDS, detections, evaluate, read_coco_gt
+from navocr_bench.detect_eval import (
+    IOU_THRESHOLDS,
+    boxed_results,
+    detections,
+    evaluate,
+    read_coco_gt,
+    scored_ground_truth,
+)
 
 
 CATEGORY_ID = 1

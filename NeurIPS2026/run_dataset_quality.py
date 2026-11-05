@@ -8,10 +8,10 @@ evaluate_navocr_f1.py. `score` also writes the Unfiltered OCR row.
 
 OCR and LLM run in separate environments and share only ocr_cache.jsonl:
 
-    python dataset_quality.py ocr --image-dir IMAGES --gt-file GT.txt --out-dir out
-    python dataset_quality.py filter --out-dir out --model MODEL --prompts p1,p3
-    python dataset_quality.py score --gt-file GT.txt --out-dir out
-    python dataset_quality.py table --out-dir out
+    python run_dataset_quality.py ocr --image-dir IMAGES --gt-file GT.txt --out-dir out
+    python run_dataset_quality.py filter --out-dir out --model MODEL --prompts p1,p3
+    python run_dataset_quality.py score --gt-file GT.txt --out-dir out
+    python run_dataset_quality.py table --out-dir out
 """
 
 from __future__ import annotations
