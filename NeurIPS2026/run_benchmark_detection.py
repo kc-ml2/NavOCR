@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Table 3: AP and FPS of PP-OCRv5 plus an LLM reranker (manifest, ocr, filter, ap, fps)."""
+"""Table 3: AP and FPS for OCR/LLM and fine-tuned detector variations."""
 from __future__ import annotations
 
 import argparse
@@ -17,6 +17,7 @@ from navocr_bench.detect_eval import (
     read_coco_gt,
     scored_ground_truth,
 )
+from navocr_bench.detectors import run_paddledet_detector, run_ppocr_detector
 from navocr_bench.llm import (
     MAX_TOKENS,
     build_transformers_client,
@@ -36,6 +37,12 @@ from navocr_bench.ocr import (
 )
 from navocr_bench.paths import prepared
 from navocr_bench.prompts import PROMPTS
+
+
+ROOT = Path(__file__).resolve().parent
+DEFAULT_PADDLEDET_ROOT = ROOT / "third_party" / "PaddleDetection"
+DEFAULT_PPYOLOE_WEIGHTS = ROOT / "weights" / "ppyoloe-navocr" / "model.pdparams"
+DEFAULT_PPOCRV5_MODEL_DIR = ROOT / "weights" / "ppocrv5-navocr"
 
 
 def _cmd_manifest(args: argparse.Namespace) -> int:
@@ -95,6 +102,72 @@ def _cmd_ocr(args: argparse.Namespace) -> int:
     )
     write_dump(results, args.out)
     _write_settings(args.out, {**ocr_settings(det_model=args.det_model), "images": len(entries)})
+    print(f"{summarise_dump(results)} -> {args.out}")
+    return 0
+
+
+def _cmd_ppocrv5_detector(args: argparse.Namespace) -> int:
+    entries = read_manifest(args.manifest)
+    _require_readable(entries, args.images)
+    max_side = args.max_side or None
+    results = list(
+        _with_progress(
+            run_ppocr_detector(
+                entries,
+                args.images,
+                args.model_dir,
+                device=args.device,
+                max_side=max_side,
+            ),
+            len(entries),
+            every=100,
+        )
+    )
+    write_dump(results, args.out)
+    _write_settings(
+        args.out,
+        {
+            "backend": "ppocrv5",
+            "model_dir": str(args.model_dir.resolve()),
+            "device": args.device,
+            "max_side": max_side,
+            "images": len(entries),
+            "versions": package_versions(
+                "paddleocr", "paddlex", "paddlepaddle-gpu"
+            ),
+        },
+    )
+    print(f"{summarise_dump(results)} -> {args.out}")
+    return 0
+
+
+def _cmd_ppyoloe_detector(args: argparse.Namespace) -> int:
+    entries = read_manifest(args.manifest)
+    _require_readable(entries, args.images)
+    config = args.config or (
+        args.paddledet_root / "configs" / "ppyoloe" / "ppyoloe_crn_s_300e_coco.yml"
+    )
+    results = run_paddledet_detector(
+        entries,
+        args.images,
+        args.paddledet_root,
+        config,
+        args.weights,
+        device=args.device,
+    )
+    write_dump(results, args.out)
+    _write_settings(
+        args.out,
+        {
+            "backend": "ppyoloe",
+            "paddledet_root": str(args.paddledet_root.resolve()),
+            "config": str(config.resolve()),
+            "weights": str(args.weights.resolve()),
+            "device": args.device,
+            "images": len(entries),
+            "versions": package_versions("paddlepaddle-gpu", "paddlepaddle"),
+        },
+    )
     print(f"{summarise_dump(results)} -> {args.out}")
     return 0
 
@@ -207,6 +280,40 @@ def _cmd_fps(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_detector_fps(args: argparse.Namespace) -> int:
+    """FPS from end-to-end elapsed time stored in a detector dump."""
+    entries = read_manifest(args.manifest)
+    if not entries:
+        raise SystemExit("manifest is empty")
+    results = read_dump(args.pred)
+    by_id = {result.id: result for result in results}
+    missing = [entry.id for entry in entries if entry.id not in by_id]
+    if missing:
+        raise SystemExit(
+            f"no detector result for {len(missing)} image(s), first: {missing[0]}"
+        )
+    failures = [by_id[entry.id] for entry in entries if by_id[entry.id].error]
+    if failures:
+        raise SystemExit(
+            f"{len(failures)} image(s) failed during detection "
+            f"(first {failures[0].id}: {failures[0].error})"
+        )
+
+    mean_s = sum(by_id[entry.id].elapsed_s for entry in entries) / len(entries)
+    payload = {
+        "n": len(entries),
+        "prediction_file": str(args.pred),
+        "mean_total_s": mean_s,
+        "fps": 1.0 / mean_s if mean_s else 0.0,
+    }
+    prepared(args.out).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    print(
+        f"n={len(entries)} detector={mean_s * 1000:.1f}ms "
+        f"({payload['fps']:.2f} FPS) -> {args.out}"
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="run_benchmark_detection.py", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -223,6 +330,38 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--det-model", default=DET_MODEL,
                    choices=["PP-OCRv5_server_det", "PP-OCRv5_mobile_det"])
     p.set_defaults(func=_cmd_ocr)
+
+    p = sub.add_parser(
+        "ppocrv5-detector", help="run a fine-tuned PP-OCRv5 detector"
+    )
+    p.add_argument("--manifest", required=True, type=Path)
+    p.add_argument("--images", required=True, type=Path)
+    p.add_argument("--model-dir", type=Path, default=DEFAULT_PPOCRV5_MODEL_DIR)
+    p.add_argument("--out", required=True, type=Path)
+    p.add_argument("--device", default="gpu:0")
+    p.add_argument(
+        "--max-side",
+        type=int,
+        default=1080,
+        help="cap the long image side; use 0 to keep the original size",
+    )
+    p.set_defaults(func=_cmd_ppocrv5_detector)
+
+    p = sub.add_parser(
+        "ppyoloe-detector", help="run a fine-tuned PP-YOLOE checkpoint"
+    )
+    p.add_argument("--manifest", required=True, type=Path)
+    p.add_argument("--images", required=True, type=Path)
+    p.add_argument("--paddledet-root", type=Path, default=DEFAULT_PADDLEDET_ROOT)
+    p.add_argument(
+        "--config",
+        type=Path,
+        help="default: <paddledet-root>/configs/ppyoloe/ppyoloe_crn_s_300e_coco.yml",
+    )
+    p.add_argument("--weights", type=Path, default=DEFAULT_PPYOLOE_WEIGHTS)
+    p.add_argument("--out", required=True, type=Path)
+    p.add_argument("--device", default="gpu:0")
+    p.set_defaults(func=_cmd_ppyoloe_detector)
 
     p = sub.add_parser("filter", help="select navigation-relevant text with an LLM")
     p.add_argument("--ocr", required=True, type=Path)
@@ -251,6 +390,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--filtered", required=True, type=Path)
     p.add_argument("--out", required=True, type=Path)
     p.set_defaults(func=_cmd_fps)
+
+    p = sub.add_parser("detector-fps", help="end-to-end FPS of a detector dump")
+    p.add_argument("--manifest", required=True, type=Path)
+    p.add_argument("--pred", required=True, type=Path)
+    p.add_argument("--out", required=True, type=Path)
+    p.set_defaults(func=_cmd_detector_fps)
 
     return parser
 

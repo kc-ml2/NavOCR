@@ -15,3 +15,6 @@ report*.json
 
 # downloaded test sets
 data/
+
+# locally cloned runtime dependency
+third_party/PaddleDetection/

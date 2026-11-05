@@ -72,6 +72,11 @@ pip install -e ".[ocr]" --extra-index-url https://www.paddlepaddle.org.cn/packag
 conda create -n navocr-llm python=3.10 -y
 conda activate navocr-llm
 pip install -e ".[llm]" --extra-index-url https://download.pytorch.org/whl/cu126
+
+# PaddleDetection source is needed only for the fine-tuned PP-YOLOE variation.
+mkdir -p third_party
+git clone --branch release/2.8.1 --depth 1 \
+    https://github.com/PaddlePaddle/PaddleDetection.git third_party/PaddleDetection
 ```
 
 Set `PYTHONNOUSERSITE=1` in both so packages from `~/.local` do not leak in.
@@ -82,6 +87,22 @@ Models need no separate download. Table 1's `llm-filter` and Table 3's
 `filter` fetch the Qwen3.5 checkpoint from Hugging Face on their first run,
 at the revision used in the paper
 ([`llm.py`](navocr_bench/llm.py)). PaddleOCR fetches its OCR models the same way.
+
+The fine-tuned Table 3 detector artifacts are stored directly in this
+repository under `weights/`:
+
+- `weights/ppyoloe-navocr/model.pdparams`: PP-YOLOE training checkpoint used
+  with the PaddleDetection source and standard PP-YOLOE-S config.
+- `weights/ppocrv5-navocr/`: exported PP-OCRv5 mobile detector containing
+  `inference.json`, `inference.pdiparams`, and `inference.yml`.
+
+No other PaddleDetection training `output/` files or PP-OCRv5 training
+checkpoints are required for inference.
+
+`run_benchmark_detection.py` resolves `third_party/PaddleDetection` and the
+paths under `weights/` relative to its own location, not the current working
+directory or the user's home directory. Use `--paddledet-root`, `--config`,
+`--weights`, or `--model-dir` only to override these defaults.
 
 Test sets: [ML2/navocr-testsets](https://huggingface.co/datasets/ML2/navocr-testsets)
 on Hugging Face (CC BY-NC 4.0, faces blurred).
@@ -167,35 +188,62 @@ conda activate navocr-ocr
 python run_benchmark_detection.py manifest --images data/detection_benchmark/images \
     --out out/detection/manifest.json
 
-# 2. OCR
+# 2a. OCR for the OCR + LLM baseline
 #    PP-OCRv5 finds every text box and reads it.
 #    Output: out/detection/ocr.jsonl (boxes, strings, confidences, OCR time per image)
 python run_benchmark_detection.py ocr --manifest out/detection/manifest.json \
     --images data/detection_benchmark/images --out out/detection/ocr.jsonl
 
-# 3. LLM filter, once per model and prompt
+# 2b. Fine-tuned PP-YOLOE NavOCR variation
+#    Uses the standard upstream config with the bundled fine-tuned checkpoint.
+python run_benchmark_detection.py ppyoloe-detector \
+    --manifest out/detection/manifest.json --images data/detection_benchmark/images \
+    --out out/detection/ppyoloe-navocr.jsonl
+
+# 2c. Fine-tuned PP-OCRv5 mobile_det NavOCR variation
+python run_benchmark_detection.py ppocrv5-detector \
+    --manifest out/detection/manifest.json --images data/detection_benchmark/images \
+    --out out/detection/ppocrv5-navocr.jsonl
+
+# Step 3 and the OCR + LLM FPS command use the LLM environment.
+conda activate navocr-llm
+
+# 3. LLM filter, once per model and prompt (optional)
 #    The LLM keeps the strings that name a place.
 #    Output: out/detection/Qwen3.5-9B.p3.jsonl (kept strings, LLM time per image)
-conda activate navocr-llm
 python run_benchmark_detection.py filter --ocr out/detection/ocr.jsonl --model Qwen/Qwen3.5-9B \
     --prompt p3 --batch-size 8 --out out/detection/Qwen3.5-9B.p3.jsonl
 
 # 4. AP
-#    Keeps the boxes of the kept strings and scores them against the hand-drawn
-#    boxes at IoU 0.25 and 0.50. Takes any number of filter outputs.
+#    Scores any number of detector dumps or LLM filter outputs against the
+#    hand-drawn boxes at IoU 0.25 and 0.50.
 #    Output: out/detection/report.ap.json
 python run_benchmark_detection.py ap --manifest out/detection/manifest.json \
     --gt data/detection_benchmark/instances_test.json \
-    --ocr out/detection/ocr.jsonl --pred out/detection/Qwen3.5-*.jsonl \
+    --ocr out/detection/ocr.jsonl \
+    --pred out/detection/Qwen3.5-*.jsonl out/detection/ppyoloe-navocr.jsonl \
+        out/detection/ppocrv5-navocr.jsonl \
     --out out/detection/report.ap.json
 
-# 5. FPS
+# 5a. OCR + LLM FPS
 #    1 / (mean OCR time + mean LLM time).
 #    Output: out/detection/fps.Qwen3.5-9B.p3.json
 python run_benchmark_detection.py fps --manifest out/detection/manifest.json \
     --ocr out/detection/ocr.jsonl --filtered out/detection/Qwen3.5-9B.p3.jsonl \
     --out out/detection/fps.Qwen3.5-9B.p3.json
+
+# 5b. Fine-tuned detector FPS
+python run_benchmark_detection.py detector-fps --manifest out/detection/manifest.json \
+    --pred out/detection/ppyoloe-navocr.jsonl \
+    --out out/detection/fps.ppyoloe-navocr.json
+python run_benchmark_detection.py detector-fps --manifest out/detection/manifest.json \
+    --pred out/detection/ppocrv5-navocr.jsonl \
+    --out out/detection/fps.ppocrv5-navocr.json
 ```
+
+Steps 2a, 2b, and 2c are independent variations. Run only the variations to be
+compared, then pass their existing output files to `ap`. Step 3 and `--ocr` in
+Step 4 are needed only when an LLM filter output is included.
 
 ## Prompts
 
