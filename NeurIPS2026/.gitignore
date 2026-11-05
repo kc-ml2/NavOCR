@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+.venv/
+venv/
+
+# run artifacts
+out/
+*.jsonl
+manifest.json
+report*.json
+
+# downloaded test sets
+data/
+
+# locally cloned runtime dependency
+third_party/PaddleDetection/
