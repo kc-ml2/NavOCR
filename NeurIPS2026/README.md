@@ -182,9 +182,6 @@ python run_benchmark_detection.py fps --manifest out/detection/manifest.json \
     --out out/detection/fps.Qwen3.5-9B.p3.json
 ```
 
-[`compare_ap_pycocotools.py`](navocr_bench/compare_ap_pycocotools.py) recomputes AP with
-pycocotools as a cross-check (`python -m navocr_bench.compare_ap_pycocotools`).
-
 ## Prompts
 
 [`prompts.py`](navocr_bench/prompts.py) holds the six prompts (p1–p6).
