@@ -17,7 +17,14 @@ from navocr_bench.detect_eval import (
     read_coco_gt,
     scored_ground_truth,
 )
-from navocr_bench.detectors import run_paddledet_detector, run_ppocr_detector
+from navocr_bench.detectors import (
+    PPOCR_BOX_THRESHOLD,
+    PPOCR_MAX_SIDE,
+    PPOCR_THRESHOLD,
+    PPOCR_UNCLIP_RATIO,
+    run_paddledet_detector,
+    run_ppocr_detector,
+)
 from navocr_bench.llm import (
     MAX_TOKENS,
     build_transformers_client,
@@ -43,6 +50,13 @@ ROOT = Path(__file__).resolve().parent
 DEFAULT_PADDLEDET_ROOT = ROOT / "third_party" / "PaddleDetection"
 DEFAULT_PPYOLOE_WEIGHTS = ROOT / "weights" / "ppyoloe-navocr" / "model.pdparams"
 DEFAULT_PPOCRV5_MODEL_DIR = ROOT / "weights" / "ppocrv5-navocr"
+
+
+def _positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("must be greater than zero")
+    return parsed
 
 
 def _cmd_manifest(args: argparse.Namespace) -> int:
@@ -109,7 +123,7 @@ def _cmd_ocr(args: argparse.Namespace) -> int:
 def _cmd_ppocrv5_detector(args: argparse.Namespace) -> int:
     entries = read_manifest(args.manifest)
     _require_readable(entries, args.images)
-    max_side = args.max_side or None
+    max_side = args.max_side
     results = list(
         _with_progress(
             run_ppocr_detector(
@@ -118,6 +132,9 @@ def _cmd_ppocrv5_detector(args: argparse.Namespace) -> int:
                 args.model_dir,
                 device=args.device,
                 max_side=max_side,
+                threshold=PPOCR_THRESHOLD,
+                box_threshold=PPOCR_BOX_THRESHOLD,
+                unclip_ratio=PPOCR_UNCLIP_RATIO,
             ),
             len(entries),
             every=100,
@@ -131,6 +148,9 @@ def _cmd_ppocrv5_detector(args: argparse.Namespace) -> int:
             "model_dir": str(args.model_dir.resolve()),
             "device": args.device,
             "max_side": max_side,
+            "threshold": PPOCR_THRESHOLD,
+            "box_threshold": PPOCR_BOX_THRESHOLD,
+            "unclip_ratio": PPOCR_UNCLIP_RATIO,
             "images": len(entries),
             "versions": package_versions(
                 "paddleocr", "paddlex", "paddlepaddle-gpu"
@@ -343,9 +363,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--device", default="gpu:0")
     p.add_argument(
         "--max-side",
-        type=int,
-        default=1080,
-        help="cap the long image side; use 0 to keep the original size",
+        type=_positive_int,
+        default=PPOCR_MAX_SIDE,
+        help="cap the long image side",
     )
     p.set_defaults(func=_cmd_ppocrv5_detector)
 

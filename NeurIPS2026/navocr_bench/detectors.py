@@ -14,6 +14,12 @@ from navocr_bench.manifest import Entry
 from navocr_bench.ocr import OcrItem, OcrResult, run_ocr
 
 
+PPOCR_MAX_SIDE = 1080
+PPOCR_THRESHOLD = 0.25
+PPOCR_BOX_THRESHOLD = 0.4
+PPOCR_UNCLIP_RATIO = 1.5
+
+
 def _box_from_polygon(polygon) -> tuple[float, float, float, float] | None:
     points = np.asarray(polygon, dtype=np.float32).reshape(-1, 2)
     if len(points) < 4:
@@ -28,9 +34,10 @@ def _box_from_polygon(polygon) -> tuple[float, float, float, float] | None:
 def build_ppocr_detector(
     model_dir: Path | str,
     device: str = "gpu:0",
-    max_side: int | None = 1080,
-    threshold: float | None = None,
-    box_threshold: float | None = None,
+    max_side: int | None = PPOCR_MAX_SIDE,
+    threshold: float | None = PPOCR_THRESHOLD,
+    box_threshold: float | None = PPOCR_BOX_THRESHOLD,
+    unclip_ratio: float | None = PPOCR_UNCLIP_RATIO,
 ):
     """Build a PP-OCRv5 detector that returns boxes and detector confidence."""
     # A local export does not need PaddleX's official model-host probe.
@@ -50,6 +57,8 @@ def build_ppocr_detector(
         kwargs["thresh"] = threshold
     if box_threshold is not None:
         kwargs["box_thresh"] = box_threshold
+    if unclip_ratio is not None:
+        kwargs["unclip_ratio"] = unclip_ratio
     detector = TextDetection(**kwargs)
 
     def engine(path: Path) -> list[OcrItem]:
@@ -77,9 +86,10 @@ def run_ppocr_detector(
     image_dir: Path | str,
     model_dir: Path | str,
     device: str = "gpu:0",
-    max_side: int | None = 1080,
-    threshold: float | None = None,
-    box_threshold: float | None = None,
+    max_side: int | None = PPOCR_MAX_SIDE,
+    threshold: float | None = PPOCR_THRESHOLD,
+    box_threshold: float | None = PPOCR_BOX_THRESHOLD,
+    unclip_ratio: float | None = PPOCR_UNCLIP_RATIO,
 ):
     engine = build_ppocr_detector(
         model_dir,
@@ -87,6 +97,7 @@ def run_ppocr_detector(
         max_side=max_side,
         threshold=threshold,
         box_threshold=box_threshold,
+        unclip_ratio=unclip_ratio,
     )
     return run_ocr(entries, image_dir, engine)
 

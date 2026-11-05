@@ -10,7 +10,14 @@ from typing import Sequence
 
 from navocr_bench.check import audit
 from navocr_bench.detect_eval import evaluate_coco_results
-from navocr_bench.detectors import run_paddledet_detector, run_ppocr_detector
+from navocr_bench.detectors import (
+    PPOCR_BOX_THRESHOLD,
+    PPOCR_MAX_SIDE,
+    PPOCR_THRESHOLD,
+    PPOCR_UNCLIP_RATIO,
+    run_paddledet_detector,
+    run_ppocr_detector,
+)
 from navocr_bench.manifest import build_manifest, read_manifest, write_manifest
 from navocr_bench.ocr import package_versions, read_dump, write_dump
 from navocr_bench.paths import prepared
@@ -19,8 +26,6 @@ from navocr_bench.paths import prepared
 ROOT = Path(__file__).resolve().parent
 DEFAULT_PADDLEDET_ROOT = ROOT / "third_party" / "PaddleDetection"
 IOU_THRESHOLDS = (0.25, 0.5, 0.75)
-PPOCR_THRESHOLD = 0.25
-PPOCR_BOX_THRESHOLD = 0.4
 VARIATIONS = {
     "ppyoloe-navocr": {
         "method": "PP-YOLOE (NavOCR)",
@@ -43,6 +48,13 @@ VARIATIONS = {
         "artifact": ROOT / "weights" / "ppocrv5-llm",
     },
 }
+
+
+def _positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("must be greater than zero")
+    return parsed
 
 
 def _require_readable(entries, image_dir: Path) -> None:
@@ -96,7 +108,7 @@ def _cmd_detect(args: argparse.Namespace) -> int:
             "versions": package_versions("paddlepaddle-gpu", "paddlepaddle"),
         }
     else:
-        max_side = args.max_side or None
+        max_side = args.max_side
         iterator = run_ppocr_detector(
             entries,
             args.images,
@@ -105,6 +117,7 @@ def _cmd_detect(args: argparse.Namespace) -> int:
             max_side=max_side,
             threshold=PPOCR_THRESHOLD,
             box_threshold=PPOCR_BOX_THRESHOLD,
+            unclip_ratio=PPOCR_UNCLIP_RATIO,
         )
         results = []
         started = time.perf_counter()
@@ -119,6 +132,7 @@ def _cmd_detect(args: argparse.Namespace) -> int:
             "max_side": max_side,
             "threshold": PPOCR_THRESHOLD,
             "box_threshold": PPOCR_BOX_THRESHOLD,
+            "unclip_ratio": PPOCR_UNCLIP_RATIO,
             "versions": package_versions("paddleocr", "paddlex", "paddlepaddle-gpu"),
         }
 
@@ -240,9 +254,9 @@ def build_parser() -> argparse.ArgumentParser:
     command.add_argument("--config", type=Path)
     command.add_argument(
         "--max-side",
-        type=int,
-        default=0,
-        help="PP-OCRv5 long-side limit; use 0 to keep the original size",
+        type=_positive_int,
+        default=PPOCR_MAX_SIDE,
+        help="PP-OCRv5 long-side limit",
     )
     command.set_defaults(func=_cmd_detect)
 
