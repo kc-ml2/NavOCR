@@ -1,4 +1,5 @@
-"""Command line for Table 3: manifest, ocr, filter, ap, fps."""
+#!/usr/bin/env python3
+"""Table 3: AP and FPS of PP-OCRv5 plus an LLM reranker (manifest, ocr, filter, ap, fps)."""
 from __future__ import annotations
 
 import argparse
@@ -8,7 +9,14 @@ from pathlib import Path
 from typing import Sequence
 
 from navocr_bench.check import audit
-from navocr_bench.detect_eval import IOU_THRESHOLDS, detections, evaluate, read_coco_gt
+from navocr_bench.detect_eval import (
+    IOU_THRESHOLDS,
+    boxed_results,
+    detections,
+    evaluate,
+    read_coco_gt,
+    scored_ground_truth,
+)
 from navocr_bench.llm import (
     MAX_TOKENS,
     build_transformers_client,
@@ -28,7 +36,6 @@ from navocr_bench.ocr import (
 )
 from navocr_bench.paths import prepared
 from navocr_bench.prompts import PROMPTS
-from navocr_bench.remap import remap
 
 
 def _cmd_manifest(args: argparse.Namespace) -> int:
@@ -124,38 +131,6 @@ def _write_settings(out: Path, settings: dict) -> None:
     prepared(path).write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
 
 
-def _is_selection(path: Path) -> bool:
-    """True for an LLM selection file, False for an OCR dump (boxes)."""
-    with open(path, encoding="utf-8") as fh:
-        for line in fh:
-            if line.strip():
-                return "selected" in json.loads(line)
-    raise SystemExit(f"{path} is empty")
-
-
-def boxed_results(path: Path, ocr_results):
-    """Prediction file as results carrying boxes, remapping LLM selections."""
-    if not _is_selection(path):
-        return read_dump(path), "dump"
-    if ocr_results is None:
-        raise SystemExit(
-            f"{path} holds LLM selections, not boxes; pass --ocr so they can be "
-            "mapped back onto the OCR boxes they came from"
-        )
-    return remap(ocr_results, read_filtered(path)), "filtered"
-
-
-def scored_ground_truth(manifest: Path, gt: dict):
-    """Manifest id -> file name, and the ground truth restricted to the manifest."""
-    names = {e.id: e.filename for e in read_manifest(manifest)}
-    known = set(names.values())
-    scored = {name: boxes for name, boxes in gt.items() if name in known}
-    missing = len(gt) - len(scored)
-    if missing:
-        print(f"warning: {missing} annotated image(s) absent from the manifest")
-    return names, scored
-
-
 def _cmd_ap(args: argparse.Namespace) -> int:
     """AP of each prediction file against the COCO ground truth."""
     names, scored = scored_ground_truth(args.manifest, read_coco_gt(args.gt))
@@ -233,7 +208,7 @@ def _cmd_fps(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="detection.py", description=__doc__)
+    parser = argparse.ArgumentParser(prog="run_benchmark_detection.py", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("manifest", help="list the images of a split and assign ids")

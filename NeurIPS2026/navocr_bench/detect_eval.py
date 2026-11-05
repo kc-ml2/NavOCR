@@ -11,7 +11,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
 
-from navocr_bench.ocr import BBox
+from navocr_bench.llm import read_filtered
+from navocr_bench.manifest import read_manifest
+from navocr_bench.ocr import BBox, read_dump
+from navocr_bench.remap import remap
 
 # IoU thresholds Table 3 reports.
 IOU_THRESHOLDS = (0.25, 0.5)
@@ -135,3 +138,35 @@ def evaluate(
     thresholds: Iterable[float] = IOU_THRESHOLDS,
 ) -> dict[str, float | None]:
     return {f"AP@{t:.2f}": average_precision(gt, preds, t) for t in thresholds}
+
+
+def _is_selection(path: Path) -> bool:
+    """True for an LLM selection file, False for an OCR dump (boxes)."""
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                return "selected" in json.loads(line)
+    raise SystemExit(f"{path} is empty")
+
+
+def boxed_results(path: Path, ocr_results):
+    """Prediction file as results carrying boxes, remapping LLM selections."""
+    if not _is_selection(path):
+        return read_dump(path), "dump"
+    if ocr_results is None:
+        raise SystemExit(
+            f"{path} holds LLM selections, not boxes; pass --ocr so they can be "
+            "mapped back onto the OCR boxes they came from"
+        )
+    return remap(ocr_results, read_filtered(path)), "filtered"
+
+
+def scored_ground_truth(manifest: Path, gt: dict):
+    """Manifest id -> file name, and the ground truth restricted to the manifest."""
+    names = {e.id: e.filename for e in read_manifest(manifest)}
+    known = set(names.values())
+    scored = {name: boxes for name, boxes in gt.items() if name in known}
+    missing = len(gt) - len(scored)
+    if missing:
+        print(f"warning: {missing} annotated image(s) absent from the manifest")
+    return names, scored
