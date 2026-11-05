@@ -9,7 +9,7 @@ evaluate_navocr_f1.py. `score` also writes the Unfiltered OCR row.
 OCR and LLM run in separate environments and share only ocr_cache.jsonl:
 
     python dataset_quality.py ocr --image-dir IMAGES --gt-file GT.txt --out-dir out
-    python dataset_quality.py filter --out-dir out --model MODEL --prompts p1,p3
+    python dataset_quality.py llm-filter --out-dir out --model MODEL --prompts p1,p3
     python dataset_quality.py score --gt-file GT.txt --out-dir out
     python dataset_quality.py table --out-dir out
 """
@@ -37,7 +37,10 @@ from navocr_bench.prompts import PROMPTS, render
 
 
 GT_THRESHOLD = 0.7
+PLACE_THRESHOLD = 0.5
 UNFILTERED_LABEL = "unfiltered"
+NAVOCR_LABEL = "navocr"
+NAVOCR_PROMPT = "map"
 OCR_DEVICE = "gpu:0"
 REC_BATCH_SIZE = 1
 # Room for several Korean names copied verbatim.
@@ -122,6 +125,14 @@ class Row:
     gt_texts: list[str]
 
 
+@dataclass(frozen=True)
+class NavOcrRow:
+    image: str
+    gt_texts: list[str]
+    place_texts: list[str]
+    translated_place_texts: list[str]
+
+
 def split_brace_fields(line: str) -> tuple[str, list[str]]:
     if "," not in line:
         raise ValueError(f"missing filename separator: {line}")
@@ -155,6 +166,63 @@ def read_gt(path: Path) -> list[Row]:
             raise ValueError(f"{path}:{line_no}: expected a brace field after image name")
         rows.append(Row(image=image_name, gt_texts=split_text_set(fields[0])))
     return rows
+
+
+def read_navocr_gt(path: Path) -> list[NavOcrRow]:
+    """Read sign text, map place name and its opposite-language translation."""
+    rows: list[NavOcrRow] = []
+    seen: set[str] = set()
+    for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        image_name, fields = split_brace_fields(line)
+        if len(fields) != 3:
+            raise ValueError(
+                f"{path}:{line_no}: expected exactly 3 brace fields after image name"
+            )
+        if image_name in seen:
+            raise ValueError(f"{path}:{line_no}: duplicate image name {image_name}")
+        seen.add(image_name)
+        gt_texts = split_text_set(fields[0])
+        place_texts = split_text_set(fields[1])
+        translated_place_texts = split_text_set(fields[2])
+        if not gt_texts or not place_texts or not translated_place_texts:
+            raise ValueError(f"{path}:{line_no}: all 3 brace fields must be non-empty")
+        rows.append(
+            NavOcrRow(
+                image=image_name,
+                gt_texts=gt_texts,
+                place_texts=place_texts,
+                translated_place_texts=translated_place_texts,
+            )
+        )
+    return rows
+
+
+def best_place_match(text: str, candidates: list[str]) -> dict[str, Any] | None:
+    best: tuple[float, str] | None = None
+    for candidate in candidates:
+        score = normalized_levenshtein_similarity(text, candidate)
+        if best is None or score > best[0]:
+            best = (score, candidate)
+    if best is None:
+        return None
+    return {"place_text": best[1], "similarity": round(best[0], 6)}
+
+
+def select_navocr(
+    ocr_texts: Iterable[str], row: NavOcrRow, threshold: float
+) -> tuple[list[str], list[dict[str, Any]]]:
+    """Keep OCR strings similar to the map name or its translation."""
+    candidates = row.place_texts + row.translated_place_texts
+    selected: list[str] = []
+    place_matches: list[dict[str, Any]] = []
+    for text in dedupe_texts(ocr_texts):
+        match = best_place_match(text, candidates)
+        if match and match["similarity"] >= threshold:
+            selected.append(text)
+            place_matches.append({"text": text, **match})
+    return selected, place_matches
 
 
 def init_ocr() -> Any:
@@ -351,6 +419,62 @@ def cmd_filter(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_navocr_filter(args: argparse.Namespace) -> int:
+    out_dir = args.out_dir.resolve()
+    cache_file = out_dir / "ocr_cache.jsonl"
+    if not cache_file.exists():
+        raise FileNotFoundError(f"{cache_file} not found; run the ocr stage first")
+
+    rows = read_navocr_gt(args.gt_file.resolve())
+    cache = load_jsonl_by_image(cache_file, "ocr_texts")
+    missing = [row.image for row in rows if row.image not in cache]
+    if missing:
+        raise KeyError(f"OCR cache is missing {len(missing)} image(s): {missing[:5]}")
+
+    path = selection_path(out_dir, NAVOCR_LABEL, NAVOCR_PROMPT)
+    selected_count = 0
+    with path.open("w", encoding="utf-8") as fh:
+        for row in rows:
+            selected, place_matches = select_navocr(
+                cache[row.image] or [], row, args.place_threshold
+            )
+            selected_count += len(selected)
+            fh.write(
+                json.dumps(
+                    {
+                        "image": row.image,
+                        "selected": selected,
+                        "place_matches": place_matches,
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
+
+    (out_dir / "filter_settings.navocr.json").write_text(
+        json.dumps(
+            {
+                "label": NAVOCR_LABEL,
+                "method": "map-place-name",
+                "gt_file": str(args.gt_file.resolve()),
+                "ocr_cache": str(cache_file),
+                "place_threshold": args.place_threshold,
+                "image_count": len(rows),
+                "selected_text_count": selected_count,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    print(
+        f"Wrote {path}: {len(rows)} images, {selected_count} selected OCR strings",
+        flush=True,
+    )
+    return 0
+
+
 def score_selection(
     rows: list[Row], selected_by_image: dict[str, list[str]], gt_threshold: float
 ) -> dict[str, Any]:
@@ -479,6 +603,8 @@ def cmd_table(args: argparse.Namespace) -> int:
         data = json.loads(path.read_text(encoding="utf-8"))
         if data["label"] == UNFILTERED_LABEL:
             name = "Unfiltered OCR"
+        elif data["label"] == NAVOCR_LABEL:
+            name = "NavOCR generator"
         else:
             name = f"LLM generator ({data['label']}, {data['prompt']})"
         m = data["micro"]
@@ -500,7 +626,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p_ocr.add_argument("--force", action="store_true", help="discard the OCR cache")
     p_ocr.set_defaults(func=cmd_ocr)
 
-    p_filter = sub.add_parser("filter", help="ask an LLM which OCR strings name a place")
+    p_filter = sub.add_parser(
+        "llm-filter", help="ask an LLM which OCR strings name a place"
+    )
     p_filter.add_argument("--out-dir", type=Path, required=True)
     p_filter.add_argument("--model", required=True, help="model id or local path")
     p_filter.add_argument(
@@ -510,6 +638,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p_filter.add_argument("--batch-size", type=int, default=8)
     p_filter.add_argument("--force", action="store_true", help="discard existing selections")
     p_filter.set_defaults(func=cmd_filter)
+
+    p_navocr = sub.add_parser(
+        "navocr-filter", help="match OCR strings against map place names"
+    )
+    p_navocr.add_argument("--out-dir", type=Path, required=True)
+    p_navocr.add_argument("--gt-file", type=Path, required=True)
+    p_navocr.add_argument(
+        "--place-threshold", type=float, default=PLACE_THRESHOLD
+    )
+    p_navocr.set_defaults(func=cmd_navocr_filter)
 
     p_score = sub.add_parser("score", help="score selections against the manual labels")
     p_score.add_argument("--out-dir", type=Path, required=True)
