@@ -315,7 +315,9 @@ def _cmd_detector_fps(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="run_benchmark_detection.py", description=__doc__)
+    parser = argparse.ArgumentParser(
+        prog="run_benchmark_model_and_llm.py", description=__doc__
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("manifest", help="list the images of a split and assign ids")

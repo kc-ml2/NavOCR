@@ -29,6 +29,8 @@ def build_ppocr_detector(
     model_dir: Path | str,
     device: str = "gpu:0",
     max_side: int | None = 1080,
+    threshold: float | None = None,
+    box_threshold: float | None = None,
 ):
     """Build a PP-OCRv5 detector that returns boxes and detector confidence."""
     # A local export does not need PaddleX's official model-host probe.
@@ -44,6 +46,10 @@ def build_ppocr_detector(
         kwargs["enable_mkldnn"] = False
     if max_side is not None:
         kwargs.update(limit_side_len=max_side, limit_type="max")
+    if threshold is not None:
+        kwargs["thresh"] = threshold
+    if box_threshold is not None:
+        kwargs["box_thresh"] = box_threshold
     detector = TextDetection(**kwargs)
 
     def engine(path: Path) -> list[OcrItem]:
@@ -72,8 +78,16 @@ def run_ppocr_detector(
     model_dir: Path | str,
     device: str = "gpu:0",
     max_side: int | None = 1080,
+    threshold: float | None = None,
+    box_threshold: float | None = None,
 ):
-    engine = build_ppocr_detector(model_dir, device=device, max_side=max_side)
+    engine = build_ppocr_detector(
+        model_dir,
+        device=device,
+        max_side=max_side,
+        threshold=threshold,
+        box_threshold=box_threshold,
+    )
     return run_ocr(entries, image_dir, engine)
 
 

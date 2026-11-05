@@ -6,6 +6,8 @@ compares it with pycocotools' 101-point version.
 """
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -170,3 +172,73 @@ def scored_ground_truth(manifest: Path, gt: dict):
     if missing:
         print(f"warning: {missing} annotated image(s) absent from the manifest")
     return names, scored
+
+
+def evaluate_coco_results(
+    gt_path: Path | str,
+    manifest_path: Path | str,
+    results: Iterable[object],
+    thresholds: Iterable[float] = IOU_THRESHOLDS,
+) -> tuple[dict[str, float], int, int]:
+    """COCO 101-point AP for result dumps, joined to ground truth by filename."""
+    import numpy as np
+    from pycocotools.coco import COCO
+    from pycocotools.cocoeval import COCOeval
+
+    payload = json.loads(Path(gt_path).read_text(encoding="utf-8"))
+    gt_ids = {image["file_name"]: image["id"] for image in payload["images"]}
+    categories = [category["id"] for category in payload["categories"]]
+    if len(categories) != 1:
+        raise ValueError(f"expected one ground-truth category, found {categories}")
+    category_id = categories[0]
+
+    names = {entry.id: entry.filename for entry in read_manifest(manifest_path)}
+    missing_names = sorted(set(names.values()) - set(gt_ids))
+    if missing_names:
+        raise ValueError(
+            f"{len(missing_names)} manifest image(s) absent from ground truth; "
+            f"first: {missing_names[0]}"
+        )
+    image_ids = [gt_ids[filename] for filename in names.values()]
+    selected_ids = set(image_ids)
+    n_gt = sum(
+        1 for annotation in payload["annotations"] if annotation["image_id"] in selected_ids
+    )
+
+    predictions = []
+    for result in results:
+        filename = names.get(result.id)
+        if filename is None:
+            continue
+        for item in result.items:
+            predictions.append(
+                {
+                    "image_id": gt_ids[filename],
+                    "category_id": category_id,
+                    "bbox": list(item.bbox),
+                    "score": float(item.score),
+                }
+            )
+
+    thresholds = np.asarray(list(thresholds), dtype=np.float64)
+    if not predictions:
+        return {f"AP@{threshold:.2f}": 0.0 for threshold in thresholds}, 0, n_gt
+
+    with contextlib.redirect_stdout(io.StringIO()):
+        coco_gt = COCO(str(gt_path))
+        coco_dt = coco_gt.loadRes(predictions)
+        evaluator = COCOeval(coco_gt, coco_dt, "bbox")
+        evaluator.params.imgIds = image_ids
+        evaluator.params.iouThrs = thresholds
+        evaluator.evaluate()
+        evaluator.accumulate()
+
+    precision = evaluator.eval["precision"]
+    area_index = list(evaluator.params.areaRngLbl).index("all")
+    max_det_index = list(evaluator.params.maxDets).index(100)
+    scores = {}
+    for index, threshold in enumerate(thresholds):
+        values = precision[index, :, :, area_index, max_det_index]
+        values = values[values > -1]
+        scores[f"AP@{threshold:.2f}"] = float(values.mean()) if values.size else 0.0
+    return scores, len(predictions), n_gt
