@@ -8,10 +8,11 @@ evaluate_navocr_f1.py. `score` also writes the Unfiltered OCR row.
 
 OCR and LLM run in separate environments and share only ocr_cache.jsonl:
 
-    python dataset_quality.py ocr --image-dir IMAGES --gt-file GT.txt --out-dir out
-    python dataset_quality.py llm-filter --out-dir out --model MODEL --prompts p1,p3
-    python dataset_quality.py score --gt-file GT.txt --out-dir out
-    python dataset_quality.py table --out-dir out
+    python run_dataset_quality.py ocr --image-dir IMAGES --gt-file GT.txt --out-dir out
+    python run_dataset_quality.py llm-filter --out-dir out --model MODEL --prompts p1,p3
+    python run_dataset_quality.py navocr-filter --gt-file GT.txt --out-dir out
+    python run_dataset_quality.py score --gt-file GT.txt --out-dir out
+    python run_dataset_quality.py table --out-dir out
 """
 
 from __future__ import annotations
@@ -40,7 +41,6 @@ GT_THRESHOLD = 0.7
 PLACE_THRESHOLD = 0.5
 UNFILTERED_LABEL = "unfiltered"
 NAVOCR_LABEL = "navocr"
-NAVOCR_PROMPT = "map"
 OCR_DEVICE = "gpu:0"
 REC_BATCH_SIZE = 1
 # Room for several Korean names copied verbatim.
@@ -431,7 +431,7 @@ def cmd_navocr_filter(args: argparse.Namespace) -> int:
     if missing:
         raise KeyError(f"OCR cache is missing {len(missing)} image(s): {missing[:5]}")
 
-    path = selection_path(out_dir, NAVOCR_LABEL, NAVOCR_PROMPT)
+    path = out_dir / f"sel.{NAVOCR_LABEL}.jsonl"
     selected_count = 0
     with path.open("w", encoding="utf-8") as fh:
         for row in rows:
@@ -544,11 +544,14 @@ def cmd_score(args: argparse.Namespace) -> int:
     if not cache_file.exists():
         raise FileNotFoundError(f"{cache_file} not found; run the ocr stage first")
 
-    # Unfiltered OCR first, then one row per sel.<label>.<prompt>.jsonl.
+    # Unfiltered OCR first, then one row per sel.<label>[.<prompt>].jsonl.
     runs = [(UNFILTERED_LABEL, "ocr", cache_file, load_jsonl_by_image(cache_file, "ocr_texts"))]
     for path in sorted(out_dir.glob("sel.*.jsonl")):
         stem = path.name[len("sel.") : -len(".jsonl")]
-        label, _, prompt = stem.rpartition(".")
+        if "." in stem:
+            label, _, prompt = stem.rpartition(".")
+        else:
+            label, prompt = stem, None
         runs.append((label, prompt, path, load_jsonl_by_image(path, "selected")))
 
     for label, prompt, path, selected in runs:
@@ -573,18 +576,20 @@ def cmd_score(args: argparse.Namespace) -> int:
             "micro": score["micro"],
             "macro": score["macro"],
         }
-        (out_dir / f"report.{label}.{prompt}.json").write_text(
+        run_name = f"{label}.{prompt}" if prompt else label
+        (out_dir / f"report.{run_name}.json").write_text(
             json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
-        with (out_dir / f"matches.{label}.{prompt}.jsonl").open(
+        with (out_dir / f"matches.{run_name}.jsonl").open(
             "w", encoding="utf-8"
         ) as fh:
             for item in score["details"]:
                 fh.write(json.dumps(item, ensure_ascii=False) + "\n")
 
         m = score["micro"]
+        run_label = f"{label} {prompt}" if prompt else label
         print(
-            f"{label} {prompt}: micro F1={m['f1']:.4f} P={m['precision']:.4f} "
+            f"{run_label}: micro F1={m['f1']:.4f} P={m['precision']:.4f} "
             f"R={m['recall']:.4f} (tp={m['tp']} fp={m['fp']} fn={m['fn']})",
             flush=True,
         )
