@@ -127,13 +127,7 @@ on Hugging Face.
 hf download ML2/navocr-testsets --repo-type dataset --local-dir data
 ```
 
-The tables above were measured on dataset version v1.0 (1,695 boxes). The current
-version, v1.0.1, removes 13 duplicate boxes (1,682 boxes). To reproduce the tables
-exactly, download v1.0:
-
-```bash
-hf download ML2/navocr-testsets --repo-type dataset --revision v1.0 --local-dir data
-```
+Tables above use dataset v1.0 (`--revision v1.0`).
 
 ## Reproduce Table 1 (Dataset quality)
 
