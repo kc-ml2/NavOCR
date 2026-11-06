@@ -127,6 +127,14 @@ on Hugging Face.
 hf download ML2/navocr-testsets --repo-type dataset --local-dir data
 ```
 
+The tables above were measured on dataset version v1.0 (1,695 boxes). The current
+version, v1.0.1, removes 13 duplicate boxes (1,682 boxes). To reproduce the tables
+exactly, download v1.0:
+
+```bash
+hf download ML2/navocr-testsets --repo-type dataset --revision v1.0 --local-dir data
+```
+
 ## Reproduce Table 1 (Dataset quality)
 
 **Data.** `data/text_selection_benchmark`: 304 images. `text_string_label.txt`
@@ -185,7 +193,7 @@ either one or both before scoring. For Qwen3.5-35B-A3B, repeat step 2a with
 
 ## Reproduce Table 2 (Fine-tuned model detection performance)
 
-**Data.** `data/detection_benchmark`: 1,554 images, 1,695 hand-drawn boxes in
+**Data.** `data/detection_benchmark`: 1,554 images, 1,682 hand-drawn boxes in
 `instances_test.json` (COCO, one category).
 
 **Run.** [`run_benchmark_fine_tuned_model.py`](run_benchmark_fine_tuned_model.py)
@@ -228,7 +236,7 @@ expects all four prediction files.
 
 ## Reproduce Table 3 (Inference speed)
 
-**Data.** `data/detection_benchmark`: 1,554 images, 1,695 hand-drawn boxes in
+**Data.** `data/detection_benchmark`: 1,554 images, 1,682 hand-drawn boxes in
 `instances_test.json` (COCO, one category).
 
 **Run.** [`run_benchmark_model_and_llm.py`](run_benchmark_model_and_llm.py)
